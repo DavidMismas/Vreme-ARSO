@@ -18,112 +18,212 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if viewModel.isLoading && viewModel.stationSnapshots.isEmpty {
-                    LoadingStateView(title: "Nalagam vremenske podatke …")
-                } else if let errorMessage = viewModel.errorMessage, viewModel.stationSnapshots.isEmpty {
+                if viewModel.isLoading && viewModel.state == nil {
+                    HomeSkeletonView()
+                } else if let state = viewModel.state {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            heroSection(state)
+                            metricsSection(state)
+                            forecastSection(state)
+
+                            if let warning = state.primaryWarning {
+                                warningSection(warning)
+                            }
+
+                            imagerySection(state)
+                        }
+                        .padding()
+                    }
+                    .scrollIndicators(.hidden)
+                    .refreshable {
+                        await load()
+                    }
+                } else if let errorMessage = viewModel.errorMessage {
                     ErrorStateView(message: errorMessage) {
                         Task { await load() }
                     }
                 } else {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 16) {
-                            if let snapshot = selectedSnapshot {
-                                CardSection(title: snapshot.station.name, systemImage: "location") {
-                                    VStack(alignment: .leading, spacing: 12) {
-                                        Text(NumberFormatterSI.string(from: snapshot.observation.temperature, suffix: "°C"))
-                                            .font(.system(size: 52, weight: .semibold, design: .rounded))
-
-                                        Text(snapshot.observation.weatherDescription ?? "Brez opisa")
-                                            .font(.title3.weight(.medium))
-
-                                        MetricRow(label: "Občutek", value: NumberFormatterSI.string(from: snapshot.observation.apparentTemperature, suffix: "°C"))
-                                        MetricRow(label: "Veter", value: windText(snapshot.observation))
-                                        MetricRow(label: "Padavine", value: NumberFormatterSI.string(from: snapshot.observation.precipitation, suffix: "mm"))
-                                        MetricRow(label: "Posodobljeno", value: snapshot.observation.timestamp.map(DateFormatterSI.displayDateTime.string(from:)) ?? "Ni podatka")
-                                        SourceBadge()
-                                    }
-                                }
-                            }
-
-                            CardSection(title: "Povzetek napovedi", systemImage: "text.alignleft") {
-                                Text(viewModel.summaryForecast?.body ?? "Napoved trenutno ni na voljo.")
-                                    .font(.body)
-                                if let issuedAt = viewModel.summaryForecast?.issuedAt {
-                                    Text("Objavljeno: \(DateFormatterSI.displayDateTime.string(from: issuedAt))")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-
-                            if let topWarning = viewModel.warnings.first {
-                                NavigationLink {
-                                    WarningsView(container: container)
-                                } label: {
-                                    CardSection(title: "Aktivno opozorilo", systemImage: "exclamationmark.triangle") {
-                                        VStack(alignment: .leading, spacing: 8) {
-                                            Text(topWarning.title)
-                                                .font(.headline)
-                                                .foregroundStyle(topWarning.severity.color)
-                                            Text(topWarning.area)
-                                                .font(.subheadline)
-                                                .foregroundStyle(.secondary)
-                                            Text(topWarning.body)
-                                                .font(.subheadline)
-                                                .lineLimit(3)
-                                        }
-                                    }
-                                }
-                                .buttonStyle(.plain)
-                            }
-
-                            HStack(spacing: 12) {
-                                NavigationLink {
-                                    RadarView(container: container)
-                                } label: {
-                                    quickLink(title: "Radar", systemImage: "dot.radiowaves.left.and.right")
-                                }
-
-                                NavigationLink {
-                                    ForecastTextView(container: container)
-                                } label: {
-                                    quickLink(title: "Tekstovna napoved", systemImage: "doc.text")
-                                }
-                            }
-
-                            NavigationLink {
-                                GraphicForecastsView(container: container)
-                            } label: {
-                                quickLink(title: "Grafične napovedi", systemImage: "square.stack.3d.up")
-                            }
-                        }
-                        .padding()
-                    }
-                    .refreshable {
-                        await load()
-                    }
+                    ContentUnavailableView("Ni podatkov", systemImage: "cloud.slash")
                 }
             }
             .navigationTitle("Vreme ARSO")
+            .animation(.easeInOut(duration: 0.22), value: viewModel.state?.location.displayName)
             .task {
                 await load()
                 locationService.requestAccessIfNeeded()
                 locationService.refreshLocation()
             }
-            .onChange(of: settingsStore.selectedStationID) { _, _ in }
-            .onChange(of: locationService.currentLocation) { _, _ in }
+            .onChange(of: settingsStore.useCurrentLocation) { _, _ in
+                Task { await load() }
+            }
+            .onChange(of: settingsStore.selectedStationID) { _, _ in
+                Task { await load() }
+            }
+            .onChange(of: settingsStore.manualLocationName) { _, _ in
+                Task { await load() }
+            }
+            .onChange(of: settingsStore.manualLocationLatitude) { _, _ in
+                Task { await load() }
+            }
+            .onChange(of: locationService.currentLocation) { _, _ in
+                Task { await load() }
+            }
         }
     }
 
-    private var selectedSnapshot: HomeViewModel.StationSnapshotViewData? {
-        viewModel.selectedSnapshot(
-            preferredStationID: settingsStore.selectedStationID,
-            useCurrentLocation: settingsStore.useCurrentLocation,
+    private func load() async {
+        await viewModel.load(
+            settings: settingsStore,
             currentLocation: locationService.currentLocation
         )
     }
 
-    private func load() async {
-        await viewModel.load()
+    private func heroSection(_ state: HomeViewModel.State) -> some View {
+        HStack(alignment: .top, spacing: 18) {
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(state.location.displayName)
+                        .font(.title2.weight(.semibold))
+
+                    if let detailText = state.location.detailText {
+                        Text(detailText)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(NumberFormatterSI.string(from: state.observation.temperature, suffix: "°C"))
+                        .font(.system(size: 68, weight: .bold, design: .rounded))
+                        .contentTransition(.numericText())
+
+                    WeatherSymbolView(condition: state.condition, size: 34)
+                        .padding(.bottom, 8)
+                }
+
+                Text(state.observation.weatherDescription ?? "Brez opisa")
+                    .font(.title3.weight(.medium))
+
+                HStack(spacing: 10) {
+                    if let timestamp = state.observation.timestamp {
+                        Label(DateFormatterSI.displayDateTime.string(from: timestamp), systemImage: "clock")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    SourceBadge()
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(AppTheme.Colors.cardBackground)
+        )
+    }
+
+    private func metricsSection(_ state: HomeViewModel.State) -> some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+            HeroMetricCard(
+                title: "Veter",
+                value: windText(state.observation),
+                systemImage: "wind"
+            )
+            HeroMetricCard(
+                title: "Padavine",
+                value: NumberFormatterSI.string(from: state.observation.precipitation, suffix: "mm"),
+                systemImage: "drop"
+            )
+            HeroMetricCard(
+                title: "Vlaga",
+                value: state.observation.humidity.map { "\($0) %" } ?? "Ni podatka",
+                systemImage: "humidity"
+            )
+            HeroMetricCard(
+                title: "Tlak",
+                value: NumberFormatterSI.string(from: state.observation.pressure, suffix: "hPa"),
+                systemImage: "gauge.with.dots.needle.33percent"
+            )
+        }
+    }
+
+    private func forecastSection(_ state: HomeViewModel.State) -> some View {
+        CardSection(title: "Napoved", systemImage: "text.alignleft") {
+            Text(state.summaryForecast?.body ?? "Napoved trenutno ni na voljo.")
+                .font(.body)
+
+            if let issuedAt = state.summaryForecast?.issuedAt {
+                Text("Objavljeno: \(DateFormatterSI.displayDateTime.string(from: issuedAt))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            NavigationLink("Odpri tekstovno napoved") {
+                ForecastTextView(container: container)
+            }
+            .font(.subheadline.weight(.semibold))
+            .padding(.top, 4)
+        }
+    }
+
+    private func warningSection(_ warning: WarningItem) -> some View {
+        NavigationLink {
+            WarningsView(container: container)
+        } label: {
+            CardSection(title: "Opozorila", systemImage: "exclamationmark.triangle") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(warning.title)
+                        .font(.headline)
+                        .foregroundStyle(warning.severity.color)
+
+                    Text(warning.area)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    Text(warning.body)
+                        .font(.subheadline)
+                        .lineLimit(3)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func imagerySection(_ state: HomeViewModel.State) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Prikazi")
+                .font(.title3.weight(.semibold))
+
+            NavigationLink {
+                RadarView(container: container)
+            } label: {
+                ImageryPreviewCard(
+                    title: "Radar padavin",
+                    subtitle: state.radarPreview?.timestamp.map(DateFormatterSI.displayDateTime.string(from:)) ?? "Zadnji prikaz",
+                    imageURL: state.radarPreview?.imageURL,
+                    cache: container.imageCacheService,
+                    systemImage: "dot.radiowaves.left.and.right"
+                )
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink {
+                SatelliteView(container: container)
+            } label: {
+                ImageryPreviewCard(
+                    title: "Satelit",
+                    subtitle: state.satellitePreview?.timestamp.map(DateFormatterSI.displayDateTime.string(from:)) ?? "Zadnja slika",
+                    imageURL: state.satellitePreview?.imageURL,
+                    cache: container.imageCacheService,
+                    systemImage: "globe.europe.africa"
+                )
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     private func windText(_ observation: CurrentObservation) -> String {
@@ -133,32 +233,101 @@ struct HomeView: View {
         }
         return speed
     }
+}
 
-    private func quickLink(title: String, systemImage: String) -> some View {
-        HStack {
+private struct HeroMetricCard: View {
+    let title: String
+    let value: String
+    let systemImage: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
             Label(title, systemImage: systemImage)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            Text(value)
                 .font(.headline)
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, minHeight: 86, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(AppTheme.Colors.cardBackground)
+        )
+    }
+}
+
+private struct ImageryPreviewCard: View {
+    let title: String
+    let subtitle: String
+    let imageURL: URL?
+    let cache: ImageCacheService
+    let systemImage: String
+
+    var body: some View {
+        HStack(spacing: 14) {
+            preview
+
+            VStack(alignment: .leading, spacing: 8) {
+                Label(title, systemImage: systemImage)
+                    .font(.headline)
+
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Text("Odpri prikaz")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.Colors.accent)
+            }
+
             Spacer()
             Image(systemName: "chevron.right")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.tertiary)
         }
-        .padding()
-        .frame(maxWidth: .infinity)
-        .background(AppTheme.Colors.cardBackground, in: RoundedRectangle(cornerRadius: AppTheme.Metrics.cardCornerRadius, style: .continuous))
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(AppTheme.Colors.cardBackground)
+        )
+    }
+
+    @ViewBuilder
+    private var preview: some View {
+        Group {
+            if let imageURL {
+                RemoteCachedImage(url: imageURL, cache: cache, contentMode: .fill)
+            } else {
+                Color.secondary.opacity(0.08)
+                    .overlay {
+                        Image(systemName: systemImage)
+                            .foregroundStyle(.secondary)
+                    }
+            }
+        }
+        .frame(width: 116, height: 84)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
 @MainActor
 final class HomeViewModel: ObservableObject {
-    struct StationSnapshotViewData: Identifiable {
-        let station: WeatherStation
+    struct State {
+        let location: ResolvedForecastLocation
         let observation: CurrentObservation
-        var id: String { station.id }
+        let condition: WeatherCondition
+        let summaryForecast: ForecastTextSection?
+        let primaryWarning: WarningItem?
+        let radarPreview: RadarFrame?
+        let satellitePreview: SatelliteFrame?
     }
 
-    @Published private(set) var stationSnapshots: [StationSnapshotViewData] = []
-    @Published private(set) var summaryForecast: ForecastTextSection?
-    @Published private(set) var warnings: [WarningItem] = []
+    @Published private(set) var state: State?
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
 
@@ -168,54 +337,66 @@ final class HomeViewModel: ObservableObject {
         self.container = container
     }
 
-    func load() async {
+    func load(settings: SettingsStore, currentLocation: CLLocation?) async {
         isLoading = true
         defer { isLoading = false }
 
         do {
-            async let stations = container.stationsService.fetchStations()
-            async let observations = container.currentWeatherService.fetchCurrentObservations()
-            async let forecast = container.forecastTextService.fetchSections()
-            async let warnings = container.warningsService.fetchWarnings()
+            let preference = LocationPreferenceSnapshot(
+                useCurrentLocation: settings.useCurrentLocation,
+                selectedStationID: settings.selectedStationID,
+                manualLocationName: settings.manualLocationName,
+                manualCoordinate: settings.manualCoordinate
+            )
 
-            let stationsValue = try await stations
-            let observationsValue = try await observations
-            let sections = try await forecast
-            let warningsValue = try await warnings
+            async let stationsTask = container.stationsService.fetchStations()
+            async let observationsTask = container.currentWeatherService.fetchCurrentObservations()
+            async let forecastTask = container.forecastTextService.fetchSections()
+            async let warningsTask = container.warningsService.fetchWarnings()
+            async let radarTask = container.radarService.fetchFrames()
+            async let satelliteTask = container.satelliteService.fetchLatestFrame()
 
-            let observationByStation = Dictionary(uniqueKeysWithValues: observationsValue.map { ($0.stationID, $0) })
-            stationSnapshots = stationsValue.compactMap { station in
-                guard let observation = observationByStation[station.id] else { return nil }
-                return StationSnapshotViewData(station: station, observation: observation)
+            let stations = try await stationsTask
+            let observations = try await observationsTask
+            let resolvedLocation = await container.locationResolver.resolve(
+                preference: preference,
+                currentLocation: currentLocation,
+                stations: stations,
+                observations: observations
+            )
+
+            guard let resolvedLocation,
+                  let observation = resolvedLocation.observation ?? observations.first else {
+                throw ARSOError.parsingFailed("Za izbrano lokacijo trenutno ni vremenskih podatkov.")
             }
-            .sorted { $0.station.name < $1.station.name }
 
-            summaryForecast = sections.first(where: { $0.type == .napoved })
-            self.warnings = warningsValue
+            let forecastSections = (try? await forecastTask) ?? []
+            let warnings = (try? await warningsTask) ?? []
+            let radarFrames = (try? await radarTask) ?? []
+            let satelliteFrame = try? await satelliteTask
+            let previewURLs = [radarFrames.last?.imageURL, radarFrames.first?.imageURL, satelliteFrame?.imageURL]
+                .compactMap { $0 }
+
+            let nextState = State(
+                location: resolvedLocation,
+                observation: observation,
+                condition: container.weatherIconProvider.condition(for: observation),
+                summaryForecast: forecastSections.first(where: { $0.type == .napoved }),
+                primaryWarning: warnings.sorted(by: { $0.severity > $1.severity }).first,
+                radarPreview: radarFrames.last ?? radarFrames.first,
+                satellitePreview: satelliteFrame
+            )
+
+            withAnimation(.easeInOut(duration: 0.22)) {
+                state = nextState
+            }
             errorMessage = nil
+            Task {
+                await container.imageCacheService.preload(urls: previewURLs)
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
-    }
-
-    func selectedSnapshot(
-        preferredStationID: String?,
-        useCurrentLocation: Bool,
-        currentLocation: CLLocation?
-    ) -> StationSnapshotViewData? {
-        if let preferredStationID,
-           let selected = stationSnapshots.first(where: { $0.station.id == preferredStationID }) {
-            return selected
-        }
-
-        if useCurrentLocation,
-           let currentLocation {
-            return stationSnapshots.min { lhs, rhs in
-                lhs.station.coordinate.distance(from: currentLocation) < rhs.station.coordinate.distance(from: currentLocation)
-            }
-        }
-
-        return stationSnapshots.first(where: { $0.station.id == "LJUBL-ANA_BEZIGRAD_" }) ?? stationSnapshots.first
     }
 }
 

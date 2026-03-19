@@ -20,13 +20,21 @@ actor ImageCacheService {
         return fileManager.fileExists(atPath: localURL.path) ? localURL : nil
     }
 
-    func file(for url: URL) async throws -> URL {
+    func file(for url: URL, forceRefresh: Bool = false) async throws -> URL {
         let localURL = localURL(for: url)
+        if forceRefresh {
+            try? fileManager.removeItem(at: localURL)
+            imageCache.removeObject(forKey: url as NSURL)
+        }
+
         if fileManager.fileExists(atPath: localURL.path) {
             return localURL
         }
 
-        let (data, _) = try await URLSession.shared.data(from: url)
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let httpResponse = response as? HTTPURLResponse, 200..<300 ~= httpResponse.statusCode else {
+            throw URLError(.badServerResponse)
+        }
         try data.write(to: localURL, options: .atomic)
         return localURL
     }
@@ -36,15 +44,13 @@ actor ImageCacheService {
             return cached
         }
 
-        let fileURL = try await file(for: url)
-        let data = try Data(contentsOf: fileURL)
-
-        guard let image = UIImage(data: data) else {
-            throw URLError(.cannotDecodeContentData)
+        do {
+            let fileURL = try await file(for: url)
+            return try decodedImage(at: fileURL, originalURL: url)
+        } catch {
+            let refreshedFileURL = try await file(for: url, forceRefresh: true)
+            return try decodedImage(at: refreshedFileURL, originalURL: url)
         }
-
-        imageCache.setObject(image, forKey: url as NSURL)
-        return image
     }
 
     func preload(urls: [URL]) async {
@@ -58,5 +64,18 @@ actor ImageCacheService {
             .replacingOccurrences(of: "https://", with: "")
             .replacingOccurrences(of: "/", with: "_")
         return cacheDirectory.appending(path: fileName)
+    }
+
+    private func decodedImage(at fileURL: URL, originalURL: URL) throws -> UIImage {
+        let data = try Data(contentsOf: fileURL)
+
+        guard let image = UIImage(data: data) else {
+            try? fileManager.removeItem(at: fileURL)
+            imageCache.removeObject(forKey: originalURL as NSURL)
+            throw URLError(.cannotDecodeContentData)
+        }
+
+        imageCache.setObject(image, forKey: originalURL as NSURL)
+        return image
     }
 }

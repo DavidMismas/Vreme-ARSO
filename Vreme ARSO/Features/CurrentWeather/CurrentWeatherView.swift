@@ -28,6 +28,8 @@ struct CurrentWeatherView: View {
                         } label: {
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack {
+                                    WeatherSymbolView(condition: row.condition, size: 20)
+
                                     Text(row.station.name)
                                         .font(.headline)
                                     if row.station.isFavorite {
@@ -74,6 +76,14 @@ private struct CurrentWeatherDetailView: View {
 
     var body: some View {
         List {
+            Section {
+                HStack(spacing: 12) {
+                    WeatherSymbolView(condition: row.condition, size: 28)
+                    Text(row.observation.weatherDescription ?? "Brez opisa")
+                        .font(.headline)
+                }
+            }
+
             Section("Postaja") {
                 MetricRow(label: "Ime", value: row.station.name)
                 MetricRow(label: "Nadmorska višina", value: NumberFormatterSI.string(from: row.station.elevation, suffix: "m"))
@@ -106,6 +116,7 @@ final class CurrentWeatherViewModel: ObservableObject {
     struct Row: Identifiable {
         let station: WeatherStation
         let observation: CurrentObservation
+        let condition: WeatherCondition
         var id: String { station.id }
     }
 
@@ -142,7 +153,11 @@ final class CurrentWeatherViewModel: ObservableObject {
                 guard let observation = observationByStation[station.id] else { return nil }
                 var updatedStation = station
                 updatedStation.isFavorite = favorites.contains(station.id)
-                return Row(station: updatedStation, observation: observation)
+                return Row(
+                    station: updatedStation,
+                    observation: observation,
+                    condition: container.weatherIconProvider.condition(for: observation)
+                )
             }
             .sorted {
                 if $0.station.isFavorite != $1.station.isFavorite {

@@ -5,31 +5,74 @@ struct SettingsView: View {
     @ObservedObject var settingsStore: SettingsStore
     @ObservedObject var locationService: LocationService
     @State private var stations: [WeatherStation] = []
+    @State private var manualLocationQuery = ""
+    @State private var isResolvingPlace = false
+    @State private var locationMessage: String?
 
     var body: some View {
         List {
             Section("Lokacija") {
                 Toggle("Uporabi trenutno lokacijo", isOn: $settingsStore.useCurrentLocation)
+
                 if !settingsStore.useCurrentLocation {
-                    Picker("Privzeta postaja", selection: Binding(
-                        get: { settingsStore.selectedStationID ?? "" },
-                        set: { settingsStore.selectedStationID = $0.isEmpty ? nil : $0 }
-                    )) {
-                        Text("Ni izbrane").tag("")
-                        ForEach(stations) { station in
-                            Text(station.name).tag(station.id)
+                    VStack(alignment: .leading, spacing: 12) {
+                        TextField("Vnesi kraj", text: $manualLocationQuery)
+                            .textInputAutocapitalization(.words)
+
+                        Button {
+                            Task { await resolveManualLocation() }
+                        } label: {
+                            if isResolvingPlace {
+                                ProgressView()
+                            } else {
+                                Text("Shrani kraj")
+                            }
                         }
+                        .disabled(manualLocationQuery.nilIfBlank == nil || isResolvingPlace)
+
+                        if let manualLocationName = settingsStore.manualLocationName {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Shranjeni kraj: \(manualLocationName)")
+                                    .font(.subheadline.weight(.medium))
+
+                                Button("Odstrani ročni kraj", role: .destructive) {
+                                    settingsStore.clearManualLocation()
+                                }
+                                .font(.caption)
+                            }
+                        }
+
+                        Picker("Fallback postaja", selection: Binding(
+                            get: { settingsStore.selectedStationID ?? "" },
+                            set: { settingsStore.selectedStationID = $0.isEmpty ? nil : $0 }
+                        )) {
+                            Text("Ni izbrane").tag("")
+                            ForEach(stations) { station in
+                                Text(station.name).tag(station.id)
+                            }
+                        }
+
+                        Text("Če za izbrani kraj ni natančnejšega koordinatnega vira, aplikacija uporabi najbližjo ARSO postajo.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
+
                 Button("Osveži trenutno lokacijo") {
                     locationService.requestAccessIfNeeded()
                     locationService.refreshLocation()
+                }
+
+                if let locationMessage {
+                    Text(locationMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
 
             Section("Osveževanje") {
                 Toggle("Samodejno osveževanje", isOn: $settingsStore.autoRefreshEnabled)
-                Text("Trenutne razmere se osvežujejo pogosteje, tekstovna napoved zmerno, radar in satelit po potrebi.")
+                Text("Radar in satelit se nalagata po potrebi, slike pa ostajajo v lokalnem cache-u za bolj miren UX.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -47,8 +90,8 @@ struct SettingsView: View {
 
             Section("O aplikaciji") {
                 SourceBadge()
-                Text("Aplikacija prikazuje ARSO podatke v nativnem SwiftUI vmesniku za Slovenijo.")
-                Text("Pripravljeno za kasnejšo razširitev z widgeti, Apple Watch in potisnimi opozorili.")
+                Text("Aplikacija uporablja javne ARSO XML, RSS, HTML in stabilne slikovne vire.")
+                Text("Nova ARSO stran služi kot UX referenca, ne kot embedded frontend.")
                     .foregroundStyle(.secondary)
             }
         }
@@ -64,6 +107,25 @@ struct SettingsView: View {
                 .sorted { $0.name < $1.name }
         } catch {
             NSLog("Nastavitvenih postaj ni bilo mogoče naložiti: %@", error.localizedDescription)
+        }
+    }
+
+    private func resolveManualLocation() async {
+        guard let query = manualLocationQuery.nilIfBlank else { return }
+
+        isResolvingPlace = true
+        defer { isResolvingPlace = false }
+
+        do {
+            let result = try await container.locationResolver.geocode(place: query)
+            settingsStore.saveManualLocation(
+                name: result.name,
+                latitude: result.latitude,
+                longitude: result.longitude
+            )
+            locationMessage = "Shranjena lokacija: \(result.name)"
+        } catch {
+            locationMessage = error.localizedDescription
         }
     }
 }

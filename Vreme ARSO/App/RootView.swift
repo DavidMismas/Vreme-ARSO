@@ -71,6 +71,14 @@ private struct MoreView: View {
                     SatelliteView(container: container)
                 }
 
+                NavigationLink("Temperature voda") {
+                    WaterTemperaturesView(container: container)
+                }
+
+                NavigationLink("Razmere v gorah") {
+                    MountainConditionsView(container: container)
+                }
+
                 NavigationLink("Grafične napovedi") {
                     GraphicForecastsView(container: container)
                 }

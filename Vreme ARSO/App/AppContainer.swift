@@ -6,12 +6,16 @@ struct AppContainer {
     let rssParserService: RSSParserService
     let htmlTextExtractor: HTMLTextExtractor
     let imageCacheService: ImageCacheService
+    let weatherIconProvider: WeatherIconProvider
+    let locationResolver: LocationResolver
     let currentWeatherService: ARSOCurrentWeatherService
     let stationsService: ARSOStationsService
     let forecastTextService: ARSOForecastTextService
     let warningsService: ARSOWarningsService
     let radarService: ARSORadarService
     let satelliteService: ARSOSatelliteService
+    let waterTemperaturesService: ARSOWaterTemperaturesService
+    let mountainConditionsService: ARSOMountainConditionsService
     let graphicForecastService: ARSOGraphicForecastService
 
     static let live: AppContainer = {
@@ -26,6 +30,8 @@ struct AppContainer {
         let rssParserService = RSSParserService()
         let htmlTextExtractor = HTMLTextExtractor()
         let imageCacheService = ImageCacheService()
+        let weatherIconProvider = WeatherIconProvider()
+        let locationResolver = LocationResolver(forecastProvider: StationForecastLocationProvider())
 
         return AppContainer(
             apiClient: apiClient,
@@ -33,12 +39,16 @@ struct AppContainer {
             rssParserService: rssParserService,
             htmlTextExtractor: htmlTextExtractor,
             imageCacheService: imageCacheService,
+            weatherIconProvider: weatherIconProvider,
+            locationResolver: locationResolver,
             currentWeatherService: ARSOCurrentWeatherService(apiClient: apiClient, xmlParser: xmlParserService),
             stationsService: ARSOStationsService(apiClient: apiClient, xmlParser: xmlParserService),
             forecastTextService: ARSOForecastTextService(apiClient: apiClient, htmlExtractor: htmlTextExtractor),
             warningsService: ARSOWarningsService(apiClient: apiClient, xmlParser: xmlParserService),
             radarService: ARSORadarService(apiClient: apiClient),
             satelliteService: ARSOSatelliteService(apiClient: apiClient),
+            waterTemperaturesService: ARSOWaterTemperaturesService(apiClient: apiClient),
+            mountainConditionsService: ARSOMountainConditionsService(apiClient: apiClient),
             graphicForecastService: ARSOGraphicForecastService(apiClient: apiClient)
         )
     }()

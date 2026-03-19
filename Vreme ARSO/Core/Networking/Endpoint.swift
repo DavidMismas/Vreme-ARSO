@@ -35,6 +35,9 @@ enum Endpoint {
     case radarTimeline
     case satelliteLatestImage
     case satelliteLatestAnimation
+    case coastForecast
+    case mountainForecast
+    case mountainSeaOverview
     case graphicTimeline(kind: GraphicKind)
     case graphicLatest(kind: GraphicKind)
 
@@ -66,6 +69,12 @@ enum Endpoint {
             return Self.baseURL.appending(path: "/uploads/probase/www/observ/satellite/mtg_geocolor_si-neighbours_latest.jpg")
         case .satelliteLatestAnimation:
             return Self.baseURL.appending(path: "/uploads/probase/www/observ/satellite/mtg_geocolor_si-neighbours_latest.mp4")
+        case .coastForecast:
+            return Self.baseURL.appending(path: "/uploads/probase/www/fproduct/text/sl/fcast_si-coast_latest.html")
+        case .mountainForecast:
+            return Self.baseURL.appending(path: "/uploads/probase/www/fproduct/text/sl/forecast_si-mountain_latest.html")
+        case .mountainSeaOverview:
+            return Self.baseURL.appending(path: "/uploads/probase/www/sproduct/mountain/")
         case .graphicTimeline(let kind):
             return Self.baseURL.appending(path: "/uploads/probase/www/nowcast/inca/\(kind.rawValue)_data.json")
         case .graphicLatest(let kind):
@@ -77,7 +86,7 @@ enum Endpoint {
         switch self {
         case .observationsOverview:
             return .currentConditions
-        case .radarTimeline, .satelliteLatestImage, .satelliteLatestAnimation, .graphicTimeline, .graphicLatest:
+        case .radarTimeline, .satelliteLatestImage, .satelliteLatestAnimation, .coastForecast, .mountainForecast, .mountainSeaOverview, .graphicTimeline, .graphicLatest:
             return .imagery
         default:
             return .forecastText
