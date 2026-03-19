@@ -10,10 +10,23 @@ protocol TimelineFrameRepresentable: Identifiable {
 extension RadarFrame: TimelineFrameRepresentable {}
 extension GraphicFrame: TimelineFrameRepresentable {}
 
+struct GeoOverlayConfiguration {
+    let referencePlaces: [GeoReferencePlace]
+    let cropToSlovenia: Bool
+    let caption: String
+
+    static let generic = GeoOverlayConfiguration(
+        referencePlaces: SloveniaOverlayData.anchorCities,
+        cropToSlovenia: false,
+        caption: "Obris Slovenije pomaga pri orientaciji prikaza."
+    )
+}
+
 struct TimelineImagePlayerView<Frame: TimelineFrameRepresentable>: View {
     let title: String
     let frames: [Frame]
     let cache: ImageCacheService
+    let overlayConfiguration: GeoOverlayConfiguration
 
     @State private var selectedIndex = 0
     @State private var isPlaying = false
@@ -21,32 +34,54 @@ struct TimelineImagePlayerView<Frame: TimelineFrameRepresentable>: View {
     private let timer = Timer.publish(every: 0.45, on: .main, in: .common).autoconnect()
     private var frameURLs: [URL] { frames.map(\.imageURL) }
 
+    init(
+        title: String,
+        frames: [Frame],
+        cache: ImageCacheService,
+        overlayConfiguration: GeoOverlayConfiguration = .generic
+    ) {
+        self.title = title
+        self.frames = frames
+        self.cache = cache
+        self.overlayConfiguration = overlayConfiguration
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if let frame = frames[safe: selectedIndex] {
+                    let cropRect = frame.geoReference.flatMap(focusRect(for:))
+
                     ZStack(alignment: .topLeading) {
                         RoundedRectangle(cornerRadius: 22, style: .continuous)
                             .fill(Color(uiColor: .secondarySystemBackground))
 
-                        RemoteCachedImage(url: frame.imageURL, cache: cache)
+                        RemoteCachedImage(
+                            url: frame.imageURL,
+                            cache: cache,
+                            normalizedCropRect: cropRect
+                        )
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
                         if let geoReference = frame.geoReference {
-                            SloveniaOutlineOverlay(geoReference: geoReference)
+                            SloveniaOutlineOverlay(
+                                geoReference: geoReference,
+                                referencePlaces: overlayConfiguration.referencePlaces,
+                                cropRect: cropRect
+                            )
                                 .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                                 .allowsHitTesting(false)
                         }
                     }
-                    .aspectRatio(frame.geoReference?.aspectRatio ?? (4 / 3), contentMode: .fit)
+                    .aspectRatio(frame.geoReference?.aspectRatio(croppedTo: cropRect) ?? frame.geoReference?.aspectRatio ?? (4 / 3), contentMode: .fit)
                     .overlay(
                         RoundedRectangle(cornerRadius: 22, style: .continuous)
                             .stroke(Color.white.opacity(0.08), lineWidth: 1)
                     )
 
                     if frame.geoReference != nil {
-                        Label("Obris Slovenije pomaga pri orientaciji prikaza.", systemImage: "map")
+                        Label(overlayConfiguration.caption, systemImage: "map")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -120,10 +155,63 @@ struct TimelineImagePlayerView<Frame: TimelineFrameRepresentable>: View {
             return seen.insert(url).inserted ? url : nil
         }
     }
+
+    private func focusRect(for geoReference: FrameGeoReference) -> CGRect? {
+        guard overlayConfiguration.cropToSlovenia else { return nil }
+
+        let borderRect = geoReference.normalizedBounds(for: SloveniaOverlayData.border)
+        let placesRect = geoReference.normalizedBounds(for: overlayConfiguration.referencePlaces)
+        let combined = union(borderRect, placesRect)
+
+        guard let combined else { return nil }
+
+        return expandedRect(
+            combined,
+            top: 0.08,
+            leading: 0.06,
+            bottom: 0.12,
+            trailing: 0.08
+        )
+    }
+
+    private func union(_ lhs: CGRect?, _ rhs: CGRect?) -> CGRect? {
+        switch (lhs, rhs) {
+        case let (lhs?, rhs?):
+            return lhs.union(rhs)
+        case let (lhs?, nil):
+            return lhs
+        case let (nil, rhs?):
+            return rhs
+        case (nil, nil):
+            return nil
+        }
+    }
+
+    private func expandedRect(
+        _ rect: CGRect,
+        top: CGFloat,
+        leading: CGFloat,
+        bottom: CGFloat,
+        trailing: CGFloat
+    ) -> CGRect {
+        let minX = max(0, rect.minX - leading)
+        let minY = max(0, rect.minY - top)
+        let maxX = min(1, rect.maxX + trailing)
+        let maxY = min(1, rect.maxY + bottom)
+
+        return CGRect(
+            x: minX,
+            y: minY,
+            width: max(maxX - minX, 0.001),
+            height: max(maxY - minY, 0.001)
+        )
+    }
 }
 
 private struct SloveniaOutlineOverlay: View {
     let geoReference: FrameGeoReference
+    let referencePlaces: [GeoReferencePlace]
+    let cropRect: CGRect?
 
     var body: some View {
         GeometryReader { geometry in
@@ -144,13 +232,10 @@ private struct SloveniaOutlineOverlay: View {
                         .shadow(color: Color.black.opacity(0.45), radius: 3, y: 1)
                 }
 
-                ForEach(SloveniaOverlayData.anchorCities) { city in
+                ForEach(referencePlaces) { city in
                     if let point = geoReference.normalizedPosition(latitude: city.latitude, longitude: city.longitude) {
                         CityAnchorLabel(name: city.name)
-                            .position(
-                                x: min(max(point.x * geometry.size.width, 54), geometry.size.width - 54),
-                                y: min(max(point.y * geometry.size.height, 18), geometry.size.height - 18)
-                            )
+                            .position(position(for: point, in: geometry.size))
                     }
                 }
             }
@@ -166,12 +251,23 @@ private struct SloveniaOutlineOverlay: View {
 
         return Path { path in
             let first = projected[0]
-            path.move(to: CGPoint(x: first.x * size.width, y: first.y * size.height))
+            path.move(to: position(for: first, in: size))
 
             for point in projected.dropFirst() {
-                path.addLine(to: CGPoint(x: point.x * size.width, y: point.y * size.height))
+                path.addLine(to: position(for: point, in: size))
             }
         }
+    }
+
+    private func position(for point: CGPoint, in size: CGSize) -> CGPoint {
+        let visibleRect = cropRect ?? CGRect(x: 0, y: 0, width: 1, height: 1)
+        let normalizedX = (point.x - visibleRect.minX) / max(visibleRect.width, 0.001)
+        let normalizedY = (point.y - visibleRect.minY) / max(visibleRect.height, 0.001)
+
+        return CGPoint(
+            x: min(max(normalizedX * size.width, 16), size.width - 16),
+            y: min(max(normalizedY * size.height, 16), size.height - 16)
+        )
     }
 }
 

@@ -160,12 +160,12 @@ enum SloveniaOverlayData {
     ]
 }
 
-struct GeoBorderPoint {
+struct GeoBorderPoint: GeoCoordinateRepresentable {
     let latitude: Double
     let longitude: Double
 }
 
-struct GeoReferencePlace: Identifiable {
+struct GeoReferencePlace: Identifiable, GeoCoordinateRepresentable {
     let name: String
     let latitude: Double
     let longitude: Double

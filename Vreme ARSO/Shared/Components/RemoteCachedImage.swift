@@ -5,23 +5,28 @@ struct RemoteCachedImage: View {
     let url: URL
     let cache: ImageCacheService
     let contentMode: ContentMode
+    let normalizedCropRect: CGRect?
 
     @State private var uiImage: UIImage?
     @State private var loadedURL: URL?
     @State private var isLoading = false
 
-    init(url: URL, cache: ImageCacheService, contentMode: ContentMode = .fit) {
+    init(
+        url: URL,
+        cache: ImageCacheService,
+        contentMode: ContentMode = .fit,
+        normalizedCropRect: CGRect? = nil
+    ) {
         self.url = url
         self.cache = cache
         self.contentMode = contentMode
+        self.normalizedCropRect = normalizedCropRect
     }
 
     var body: some View {
         Group {
             if let uiImage {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .aspectRatio(contentMode: contentMode)
+                imageView(for: uiImage)
             } else if isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity, minHeight: 160)
@@ -35,6 +40,30 @@ struct RemoteCachedImage: View {
         }
         .task(id: url) {
             await load(for: url)
+        }
+    }
+
+    @ViewBuilder
+    private func imageView(for image: UIImage) -> some View {
+        if let normalizedCropRect {
+            GeometryReader { geometry in
+                let cropRect = normalizedCropRect.standardized
+                let width = geometry.size.width / max(cropRect.width, 0.001)
+                let height = geometry.size.height / max(cropRect.height, 0.001)
+
+                Image(uiImage: image)
+                    .resizable()
+                    .frame(width: width, height: height)
+                    .offset(
+                        x: -cropRect.minX * width,
+                        y: -cropRect.minY * height
+                    )
+            }
+            .clipped()
+        } else {
+            Image(uiImage: image)
+                .resizable()
+                .aspectRatio(contentMode: contentMode)
         }
     }
 
