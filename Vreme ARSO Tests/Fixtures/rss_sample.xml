@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+    <channel>
+        <title>ARSO napoved</title>
+        <item>
+            <guid>napoved-1</guid>
+            <title>Napoved za Slovenijo</title>
+            <description>Pretežno jasno vreme.</description>
+            <link>https://meteo.arso.gov.si/example</link>
+            <pubDate>Thu, 19 Mar 2026 17:02:00 +0100</pubDate>
+        </item>
+    </channel>
+</rss>

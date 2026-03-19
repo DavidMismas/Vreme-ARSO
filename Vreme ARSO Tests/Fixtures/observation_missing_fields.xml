@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<data id="MeteoSI_WebMet_observation_xml">
+    <credit>Agencija Republike Slovenije za okolje</credit>
+    <metData>
+        <domain_meteosiId>KATARINA_</domain_meteosiId>
+        <domain_lat>46.0933</domain_lat>
+        <domain_lon>14.3756</domain_lon>
+        <domain_longTitle>Katarina nad Ljubljano</domain_longTitle>
+        <tsUpdated>19.03.2026 18:42 CET</tsUpdated>
+        <t>8</t>
+        <rh>43</rh>
+        <dd_shortText></dd_shortText>
+        <ff_val></ff_val>
+        <rr24h_val></rr24h_val>
+        <nn_shortText></nn_shortText>
+    </metData>
+</data>

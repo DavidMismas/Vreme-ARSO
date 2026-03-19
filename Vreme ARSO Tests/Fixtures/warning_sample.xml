@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+    <identifier>test-warning</identifier>
+    <info>
+        <language>sl</language>
+        <event>Veter - zmerna ogroženost</event>
+        <severity>Moderate</severity>
+        <effective>2026-03-19T06:27:00+01:00</effective>
+        <onset>2026-03-19T00:00:00+01:00</onset>
+        <expires>2026-03-20T12:00:00+01:00</expires>
+        <headline>Veter - zmerna ogroženost (Stopnja 2/4) - Slovenija / osrednja</headline>
+        <description>Možni so močnejši sunki vetra.</description>
+        <parameter>
+            <valueName>awareness_type</valueName>
+            <value>1; wind</value>
+        </parameter>
+        <area>
+            <areaDesc>Slovenija / osrednja</areaDesc>
+            <polygon>46.203,14.912 46.208,14.896 46.190,14.763</polygon>
+        </area>
+    </info>
+</alert>
