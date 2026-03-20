@@ -44,7 +44,10 @@ struct SettingsView: View {
 
                         Picker("Fallback postaja", selection: Binding(
                             get: { settingsStore.selectedStationID ?? "" },
-                            set: { settingsStore.selectedStationID = $0.isEmpty ? nil : $0 }
+                            set: { value in
+                                let station = stations.first(where: { $0.id == value })
+                                settingsStore.setSelectedStation(station)
+                            }
                         )) {
                             Text("Ni izbrane").tag("")
                             ForEach(stations) { station in
@@ -53,6 +56,18 @@ struct SettingsView: View {
                         }
 
                         Text("Če za izbrani kraj ni natančnejšega koordinatnega vira, aplikacija uporabi najbližjo ARSO postajo.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Toggle(
+                            "Prikaži izbrano priljubljeno postajo na Domov in widgetu",
+                            isOn: $settingsStore.useSelectedFavoriteStationForPrimaryViews
+                        )
+                        .disabled(!settingsStore.hasSelectedFavoriteStation)
+
+                        Text(settingsStore.hasSelectedFavoriteStation
+                             ? "Če je vključeno, Domov in widget uporabita izbrano priljubljeno postajo namesto trenutne lokacije ali ročnega kraja."
+                             : "Najprej izberi postajo in jo označi kot priljubljeno, potem jo lahko pripneš na Domov in widget.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -105,6 +120,7 @@ struct SettingsView: View {
         do {
             stations = try await container.stationsService.fetchStations()
                 .sorted { $0.name < $1.name }
+            settingsStore.reconcileSelectedStation(with: stations)
         } catch {
             NSLog("Nastavitvenih postaj ni bilo mogoče naložiti: %@", error.localizedDescription)
         }

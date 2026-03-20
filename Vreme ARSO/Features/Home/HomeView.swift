@@ -17,36 +17,7 @@ struct HomeView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if viewModel.isLoading && viewModel.state == nil {
-                    HomeSkeletonView()
-                } else if let state = viewModel.state {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 16) {
-                            heroSection(state)
-                            metricsSection(state)
-                            forecastSection(state)
-
-                            if let warning = state.primaryWarning {
-                                warningSection(warning)
-                            }
-
-                            imagerySection(state)
-                        }
-                        .padding()
-                    }
-                    .scrollIndicators(.hidden)
-                    .refreshable {
-                        await load()
-                    }
-                } else if let errorMessage = viewModel.errorMessage {
-                    ErrorStateView(message: errorMessage) {
-                        Task { await load() }
-                    }
-                } else {
-                    ContentUnavailableView("Ni podatkov", systemImage: "cloud.slash")
-                }
-            }
+            contentView
             .navigationTitle("Vreme ARSO")
             .animation(.easeInOut(duration: 0.22), value: viewModel.state?.location.displayName)
             .task {
@@ -55,20 +26,41 @@ struct HomeView: View {
                 locationService.refreshLocation()
             }
             .onChange(of: settingsStore.useCurrentLocation) { _, _ in
-                Task { await load() }
+                reloadHome()
             }
             .onChange(of: settingsStore.selectedStationID) { _, _ in
-                Task { await load() }
+                reloadHome()
+            }
+            .onChange(of: settingsStore.useSelectedFavoriteStationForPrimaryViews) { _, _ in
+                reloadHome()
             }
             .onChange(of: settingsStore.manualLocationName) { _, _ in
-                Task { await load() }
+                reloadHome()
             }
             .onChange(of: settingsStore.manualLocationLatitude) { _, _ in
-                Task { await load() }
+                reloadHome()
+            }
+            .onChange(of: settingsStore.favoriteStationIDs) { _, _ in
+                reloadHome()
             }
             .onChange(of: locationService.currentLocation) { _, _ in
-                Task { await load() }
+                reloadHome()
             }
+        }
+    }
+
+    @ViewBuilder
+    private var contentView: some View {
+        if viewModel.isLoading && viewModel.state == nil {
+            HomeSkeletonView()
+        } else if let state = viewModel.state {
+            stateContent(state)
+        } else if let errorMessage = viewModel.errorMessage {
+            ErrorStateView(message: errorMessage) {
+                reloadHome()
+            }
+        } else {
+            ContentUnavailableView("Ni podatkov", systemImage: "cloud.slash")
         }
     }
 
@@ -77,6 +69,31 @@ struct HomeView: View {
             settings: settingsStore,
             currentLocation: locationService.currentLocation
         )
+    }
+
+    private func reloadHome() {
+        Task { await load() }
+    }
+
+    private func stateContent(_ state: HomeViewModel.State) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                heroSection(state)
+                metricsSection(state)
+                forecastSection(state)
+
+                if let warning = state.primaryWarning {
+                    warningSection(warning)
+                }
+
+                imagerySection(state)
+            }
+            .padding()
+        }
+        .scrollIndicators(.hidden)
+        .refreshable {
+            await load()
+        }
     }
 
     private func heroSection(_ state: HomeViewModel.State) -> some View {
@@ -358,6 +375,7 @@ final class HomeViewModel: ObservableObject {
 
         do {
             let preference = LocationPreferenceSnapshot(
+                pinnedStationID: settings.pinnedFavoriteStationID,
                 useCurrentLocation: settings.useCurrentLocation,
                 selectedStationID: settings.selectedStationID,
                 manualLocationName: settings.manualLocationName,

@@ -12,6 +12,7 @@ struct ManualLocationResult: Sendable {
 }
 
 struct LocationPreferenceSnapshot {
+    let pinnedStationID: String?
     let useCurrentLocation: Bool
     let selectedStationID: String?
     let manualLocationName: String?
@@ -33,6 +34,18 @@ final class LocationResolver {
         observations: [CurrentObservation]
     ) async -> ResolvedForecastLocation? {
         let observationsByStation = Dictionary(uniqueKeysWithValues: observations.map { ($0.stationID, $0) })
+
+        if let pinnedStationID = preference.pinnedStationID,
+           let station = stations.first(where: { $0.id == pinnedStationID }) {
+            return ResolvedForecastLocation(
+                displayName: station.name,
+                detailText: "Prikaz po izbrani priljubljeni postaji",
+                source: .station,
+                coordinate: station.coordinate,
+                nearestStation: station,
+                observation: observationsByStation[station.id]
+            )
+        }
 
         if preference.useCurrentLocation,
            let currentLocation {

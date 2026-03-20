@@ -92,7 +92,7 @@ struct StationsMapView: View {
                         }
                         Section {
                             Button("Nastavi kot privzeto postajo") {
-                                settingsStore.selectedStationID = station.station.id
+                                settingsStore.setSelectedStation(station.station)
                             }
                         }
                     }

@@ -13,7 +13,11 @@ enum WidgetSharedStore {
         useCurrentLocation: Bool,
         manualLocationName: String?,
         manualLatitude: Double?,
-        manualLongitude: Double?
+        manualLongitude: Double?,
+        useSelectedFavoriteStation: Bool,
+        selectedStationName: String?,
+        selectedStationLatitude: Double?,
+        selectedStationLongitude: Double?
     ) {
         guard let sharedDefaults else { return }
 
@@ -21,6 +25,10 @@ enum WidgetSharedStore {
         sharedDefaults.set(manualLocationName, forKey: Keys.manualLocationName)
         sharedDefaults.set(manualLatitude, forKey: Keys.manualLocationLatitude)
         sharedDefaults.set(manualLongitude, forKey: Keys.manualLocationLongitude)
+        sharedDefaults.set(useSelectedFavoriteStation, forKey: Keys.useSelectedFavoriteStation)
+        sharedDefaults.set(selectedStationName, forKey: Keys.selectedStationName)
+        sharedDefaults.set(selectedStationLatitude, forKey: Keys.selectedStationLatitude)
+        sharedDefaults.set(selectedStationLongitude, forKey: Keys.selectedStationLongitude)
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -38,6 +46,10 @@ private enum Keys {
     static let manualLocationName = "manualLocationName"
     static let manualLocationLatitude = "manualLocationLatitude"
     static let manualLocationLongitude = "manualLocationLongitude"
+    static let useSelectedFavoriteStation = "useSelectedFavoriteStation"
+    static let selectedStationName = "selectedStationName"
+    static let selectedStationLatitude = "selectedStationLatitude"
+    static let selectedStationLongitude = "selectedStationLongitude"
     static let currentLocationLatitude = "widgetCurrentLocationLatitude"
     static let currentLocationLongitude = "widgetCurrentLocationLongitude"
 }

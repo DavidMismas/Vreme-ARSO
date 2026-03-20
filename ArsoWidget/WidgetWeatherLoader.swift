@@ -13,6 +13,7 @@ struct WidgetWeatherLoader {
             return try parseContent(
                 forecastPayload: forecastPayload,
                 nonlocationPayload: nonlocationPayload,
+                preferredDisplayName: resolved.displayName,
                 fallbackLocation: resolved.isFallback
             )
         } catch {
@@ -29,8 +30,15 @@ struct WidgetWeatherLoader {
         let manualLongitude = defaults?.object(forKey: WidgetSharedStore.Keys.manualLocationLongitude) as? Double
         let currentLatitude = defaults?.object(forKey: WidgetSharedStore.Keys.currentLocationLatitude) as? Double
         let currentLongitude = defaults?.object(forKey: WidgetSharedStore.Keys.currentLocationLongitude) as? Double
+        let useSelectedFavoriteStation = defaults?.object(forKey: WidgetSharedStore.Keys.useSelectedFavoriteStation) as? Bool ?? false
+        let selectedStationName = defaults?.string(forKey: WidgetSharedStore.Keys.selectedStationName)
+        let selectedStationLatitude = defaults?.object(forKey: WidgetSharedStore.Keys.selectedStationLatitude) as? Double
+        let selectedStationLongitude = defaults?.object(forKey: WidgetSharedStore.Keys.selectedStationLongitude) as? Double
 
         return WidgetLocationPreference(
+            useSelectedFavoriteStation: useSelectedFavoriteStation,
+            selectedStationName: selectedStationName,
+            selectedStationCoordinate: coordinate(latitude: selectedStationLatitude, longitude: selectedStationLongitude),
             useCurrentLocation: useCurrentLocation,
             manualLocationName: manualLocationName,
             manualCoordinate: coordinate(latitude: manualLatitude, longitude: manualLongitude),
@@ -39,10 +47,30 @@ struct WidgetWeatherLoader {
     }
 
     private func resolveLocation(preference: WidgetLocationPreference) async throws -> WidgetResolvedLocation {
+        if preference.useSelectedFavoriteStation {
+            if let selectedStationCoordinate = preference.selectedStationCoordinate {
+                let nearestName = try await fetchNearestLocationName(for: selectedStationCoordinate)
+                return WidgetResolvedLocation(
+                    forecastURL: locationURL(named: nearestName),
+                    displayName: preference.selectedStationName ?? nearestName,
+                    isFallback: false
+                )
+            }
+
+            if let selectedStationName = preference.selectedStationName?.nilIfBlank {
+                return WidgetResolvedLocation(
+                    forecastURL: locationURL(named: selectedStationName),
+                    displayName: selectedStationName,
+                    isFallback: false
+                )
+            }
+        }
+
         if preference.useCurrentLocation, let currentCoordinate = preference.currentCoordinate {
             let nearestName = try await fetchNearestLocationName(for: currentCoordinate)
             return WidgetResolvedLocation(
                 forecastURL: locationURL(named: nearestName),
+                displayName: nil,
                 isFallback: false
             )
         }
@@ -50,6 +78,7 @@ struct WidgetWeatherLoader {
         if let manualLocationName = preference.manualLocationName?.nilIfBlank {
             return WidgetResolvedLocation(
                 forecastURL: locationURL(named: manualLocationName),
+                displayName: manualLocationName,
                 isFallback: false
             )
         }
@@ -58,12 +87,14 @@ struct WidgetWeatherLoader {
             let nearestName = try await fetchNearestLocationName(for: manualCoordinate)
             return WidgetResolvedLocation(
                 forecastURL: locationURL(named: nearestName),
+                displayName: nil,
                 isFallback: false
             )
         }
 
         return WidgetResolvedLocation(
             forecastURL: locationURL(named: "Ljubljana"),
+            displayName: "Ljubljana",
             isFallback: true
         )
     }
@@ -115,6 +146,7 @@ struct WidgetWeatherLoader {
     private func parseContent(
         forecastPayload: [String: Any],
         nonlocationPayload: [String: Any]?,
+        preferredDisplayName: String?,
         fallbackLocation: Bool
     ) throws -> WidgetWeatherContent {
         guard
@@ -134,7 +166,9 @@ struct WidgetWeatherLoader {
             throw WidgetLoaderError.invalidPayload
         }
 
-        let locationName = (forecastProperties["title"] as? String)?.nilIfBlank ?? "Ljubljana"
+        let locationName = preferredDisplayName?.nilIfBlank
+            ?? (forecastProperties["title"] as? String)?.nilIfBlank
+            ?? "Ljubljana"
         let currentTemperature = stringValue(current["t"]) ?? "Ni podatka"
         let currentSummary = firstNonEmpty(
             stringValue(current["clouds_shortText_wwsyn_shortText"]),
@@ -319,6 +353,9 @@ struct WidgetWeatherLoader {
 }
 
 private struct WidgetLocationPreference {
+    let useSelectedFavoriteStation: Bool
+    let selectedStationName: String?
+    let selectedStationCoordinate: CLLocationCoordinate2D?
     let useCurrentLocation: Bool
     let manualLocationName: String?
     let manualCoordinate: CLLocationCoordinate2D?
@@ -327,6 +364,7 @@ private struct WidgetLocationPreference {
 
 private struct WidgetResolvedLocation {
     let forecastURL: URL
+    let displayName: String?
     let isFallback: Bool
 }
 
