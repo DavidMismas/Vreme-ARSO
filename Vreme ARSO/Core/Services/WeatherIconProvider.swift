@@ -40,7 +40,7 @@ struct WeatherIconProvider {
             return .wind
         }
 
-        if icon == "clear" || description.contains("jasno") {
+        if icon == "clear" || icon.contains("clear_") || description.contains("jasno") {
             return .clear
         }
 

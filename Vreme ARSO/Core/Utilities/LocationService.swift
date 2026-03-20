@@ -37,6 +37,7 @@ extension LocationService: CLLocationManagerDelegate {
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         currentLocation = locations.last
+        WidgetSharedStore.syncCurrentLocation(currentLocation)
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {

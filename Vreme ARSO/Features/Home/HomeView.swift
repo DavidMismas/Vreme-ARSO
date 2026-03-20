@@ -114,6 +114,21 @@ struct HomeView: View {
 
                     SourceBadge()
                 }
+
+                NavigationLink {
+                    LocationForecastView(container: container, location: state.location)
+                } label: {
+                    Label("Napoved po dnevih", systemImage: "calendar")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.Colors.accent)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(AppTheme.Colors.groupedBackground)
+                        )
+                }
+                .buttonStyle(.plain)
             }
 
             Spacer(minLength: 0)

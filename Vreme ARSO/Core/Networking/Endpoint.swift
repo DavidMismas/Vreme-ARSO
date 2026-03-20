@@ -38,10 +38,13 @@ enum Endpoint {
     case coastForecast
     case mountainForecast
     case mountainSeaOverview
+    case locationForecast(locationName: String)
+    case nearestForecastLocation(latitude: Double, longitude: Double)
     case graphicTimeline(kind: GraphicKind)
     case graphicLatest(kind: GraphicKind)
 
     private static let baseURL = URL(string: "https://meteo.arso.gov.si")!
+    private static let vremeBaseURL = URL(string: "https://vreme.arso.gov.si")!
 
     var url: URL {
         switch self {
@@ -75,6 +78,20 @@ enum Endpoint {
             return Self.baseURL.appending(path: "/uploads/probase/www/fproduct/text/sl/forecast_si-mountain_latest.html")
         case .mountainSeaOverview:
             return Self.baseURL.appending(path: "/uploads/probase/www/sproduct/mountain/")
+        case .locationForecast(let locationName):
+            var components = URLComponents(url: Self.vremeBaseURL.appending(path: "/api/1.0/location/"), resolvingAgainstBaseURL: false)
+            components?.queryItems = [
+                URLQueryItem(name: "lang", value: "sl"),
+                URLQueryItem(name: "location", value: locationName)
+            ]
+            return components?.url ?? Self.vremeBaseURL.appending(path: "/api/1.0/location/")
+        case .nearestForecastLocation(let latitude, let longitude):
+            var components = URLComponents(url: Self.vremeBaseURL.appending(path: "/api/1.0/locations/"), resolvingAgainstBaseURL: false)
+            components?.queryItems = [
+                URLQueryItem(name: "lat", value: String(latitude)),
+                URLQueryItem(name: "lon", value: String(longitude))
+            ]
+            return components?.url ?? Self.vremeBaseURL.appending(path: "/api/1.0/locations/")
         case .graphicTimeline(let kind):
             return Self.baseURL.appending(path: "/uploads/probase/www/nowcast/inca/\(kind.rawValue)_data.json")
         case .graphicLatest(let kind):

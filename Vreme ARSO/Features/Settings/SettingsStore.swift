@@ -5,11 +5,17 @@ import Foundation
 @MainActor
 final class SettingsStore: ObservableObject {
     @Published var selectedStationID: String? {
-        didSet { defaults.set(selectedStationID, forKey: Keys.selectedStationID) }
+        didSet {
+            defaults.set(selectedStationID, forKey: Keys.selectedStationID)
+            syncWidgetPreferences()
+        }
     }
 
     @Published var useCurrentLocation: Bool {
-        didSet { defaults.set(useCurrentLocation, forKey: Keys.useCurrentLocation) }
+        didSet {
+            defaults.set(useCurrentLocation, forKey: Keys.useCurrentLocation)
+            syncWidgetPreferences()
+        }
     }
 
     @Published var autoRefreshEnabled: Bool {
@@ -17,15 +23,24 @@ final class SettingsStore: ObservableObject {
     }
 
     @Published var manualLocationName: String? {
-        didSet { defaults.set(manualLocationName, forKey: Keys.manualLocationName) }
+        didSet {
+            defaults.set(manualLocationName, forKey: Keys.manualLocationName)
+            syncWidgetPreferences()
+        }
     }
 
     @Published var manualLocationLatitude: Double? {
-        didSet { defaults.set(manualLocationLatitude, forKey: Keys.manualLocationLatitude) }
+        didSet {
+            defaults.set(manualLocationLatitude, forKey: Keys.manualLocationLatitude)
+            syncWidgetPreferences()
+        }
     }
 
     @Published var manualLocationLongitude: Double? {
-        didSet { defaults.set(manualLocationLongitude, forKey: Keys.manualLocationLongitude) }
+        didSet {
+            defaults.set(manualLocationLongitude, forKey: Keys.manualLocationLongitude)
+            syncWidgetPreferences()
+        }
     }
 
     @Published private(set) var favoriteStationIDs: Set<String> {
@@ -42,6 +57,7 @@ final class SettingsStore: ObservableObject {
         manualLocationLatitude = defaults.object(forKey: Keys.manualLocationLatitude) as? Double
         manualLocationLongitude = defaults.object(forKey: Keys.manualLocationLongitude) as? Double
         favoriteStationIDs = Set(defaults.stringArray(forKey: Keys.favoriteStationIDs) ?? [])
+        syncWidgetPreferences()
     }
 
     func toggleFavorite(stationID: String) {
@@ -71,6 +87,15 @@ final class SettingsStore: ObservableObject {
         manualLocationName = nil
         manualLocationLatitude = nil
         manualLocationLongitude = nil
+    }
+
+    private func syncWidgetPreferences() {
+        WidgetSharedStore.syncPreferences(
+            useCurrentLocation: useCurrentLocation,
+            manualLocationName: manualLocationName,
+            manualLatitude: manualLocationLatitude,
+            manualLongitude: manualLocationLongitude
+        )
     }
 }
 

@@ -11,6 +11,8 @@ import SwiftUI
 @main
 struct ArsoWidgetBundle: WidgetBundle {
     var body: some Widget {
-        ArsoWidget()
+        ArsoCurrentWidget()
+        ArsoForecastMediumWidget()
+        ArsoForecastLargeWidget()
     }
 }

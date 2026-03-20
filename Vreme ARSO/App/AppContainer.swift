@@ -17,6 +17,7 @@ struct AppContainer {
     let waterTemperaturesService: ARSOWaterTemperaturesService
     let mountainConditionsService: ARSOMountainConditionsService
     let graphicForecastService: ARSOGraphicForecastService
+    let locationForecastService: ARSOLocationForecastService
 
     static let live: AppContainer = {
         let validator = ResponseValidator()
@@ -49,7 +50,8 @@ struct AppContainer {
             satelliteService: ARSOSatelliteService(apiClient: apiClient),
             waterTemperaturesService: ARSOWaterTemperaturesService(apiClient: apiClient),
             mountainConditionsService: ARSOMountainConditionsService(apiClient: apiClient),
-            graphicForecastService: ARSOGraphicForecastService(apiClient: apiClient)
+            graphicForecastService: ARSOGraphicForecastService(apiClient: apiClient),
+            locationForecastService: ARSOLocationForecastService(apiClient: apiClient)
         )
     }()
 }

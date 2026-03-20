@@ -6,7 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		63BCD6AA2F6D171400328CCC /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 63BCD6A92F6D171400328CCC /* WidgetKit.framework */; };
+		63BCD6AC2F6D171400328CCC /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 63BCD6AB2F6D171400328CCC /* SwiftUI.framework */; };
+		63BCD6B72F6D171600328CCC /* ArsoWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 63BCD6A72F6D171400328CCC /* ArsoWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
+		63BCD6B52F6D171600328CCC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 63BCD4982F6C6EC500328CCC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 63BCD6A62F6D171400328CCC;
+			remoteInfo = ArsoWidgetExtension;
+		};
 		A1B2C3D12F6D000100000001 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 63BCD4982F6C6EC500328CCC /* Project object */;
@@ -16,15 +29,51 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		63BCD6BC2F6D171600328CCC /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				63BCD6B72F6D171600328CCC /* ArsoWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		63BCD4A02F6C6EC500328CCC /* Vreme ARSO.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Vreme ARSO.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		63BCD6A72F6D171400328CCC /* ArsoWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ArsoWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		63BCD6A92F6D171400328CCC /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		63BCD6AB2F6D171400328CCC /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		63BCD7AA2F6D1A2D00328CCC /* ArsoWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ArsoWidgetExtension.entitlements; sourceTree = "<group>"; };
 		A1B2C3D22F6D000100000002 /* Vreme ARSO Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Vreme ARSO Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		63BCD6B82F6D171600328CCC /* Exceptions for "ArsoWidget" folder in "ArsoWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 63BCD6A62F6D171400328CCC /* ArsoWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		63BCD4A22F6C6EC500328CCC /* Vreme ARSO */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Vreme ARSO";
+			sourceTree = "<group>";
+		};
+		63BCD6AD2F6D171400328CCC /* ArsoWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				63BCD6B82F6D171600328CCC /* Exceptions for "ArsoWidget" folder in "ArsoWidgetExtension" target */,
+			);
+			path = ArsoWidget;
 			sourceTree = "<group>";
 		};
 		A1B2C3D32F6D000100000003 /* Vreme ARSO Tests */ = {
@@ -42,6 +91,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		63BCD6A42F6D171400328CCC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				63BCD6AC2F6D171400328CCC /* SwiftUI.framework in Frameworks */,
+				63BCD6AA2F6D171400328CCC /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A1B2C3D42F6D000100000004 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -55,8 +113,11 @@
 		63BCD4972F6C6EC500328CCC = {
 			isa = PBXGroup;
 			children = (
+				63BCD7AA2F6D1A2D00328CCC /* ArsoWidgetExtension.entitlements */,
 				63BCD4A22F6C6EC500328CCC /* Vreme ARSO */,
 				A1B2C3D32F6D000100000003 /* Vreme ARSO Tests */,
+				63BCD6AD2F6D171400328CCC /* ArsoWidget */,
+				63BCD6A82F6D171400328CCC /* Frameworks */,
 				63BCD4A12F6C6EC500328CCC /* Products */,
 			);
 			sourceTree = "<group>";
@@ -66,8 +127,18 @@
 			children = (
 				63BCD4A02F6C6EC500328CCC /* Vreme ARSO.app */,
 				A1B2C3D22F6D000100000002 /* Vreme ARSO Tests.xctest */,
+				63BCD6A72F6D171400328CCC /* ArsoWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		63BCD6A82F6D171400328CCC /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				63BCD6A92F6D171400328CCC /* WidgetKit.framework */,
+				63BCD6AB2F6D171400328CCC /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -80,10 +151,12 @@
 				63BCD49C2F6C6EC500328CCC /* Sources */,
 				63BCD49D2F6C6EC500328CCC /* Frameworks */,
 				63BCD49E2F6C6EC500328CCC /* Resources */,
+				63BCD6BC2F6D171600328CCC /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				63BCD6B62F6D171600328CCC /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				63BCD4A22F6C6EC500328CCC /* Vreme ARSO */,
@@ -94,6 +167,28 @@
 			productName = "Vreme ARSO";
 			productReference = 63BCD4A02F6C6EC500328CCC /* Vreme ARSO.app */;
 			productType = "com.apple.product-type.application";
+		};
+		63BCD6A62F6D171400328CCC /* ArsoWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 63BCD6B92F6D171600328CCC /* Build configuration list for PBXNativeTarget "ArsoWidgetExtension" */;
+			buildPhases = (
+				63BCD6A32F6D171400328CCC /* Sources */,
+				63BCD6A42F6D171400328CCC /* Frameworks */,
+				63BCD6A52F6D171400328CCC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				63BCD6AD2F6D171400328CCC /* ArsoWidget */,
+			);
+			name = ArsoWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = ArsoWidgetExtension;
+			productReference = 63BCD6A72F6D171400328CCC /* ArsoWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 		A1B2C3D52F6D000100000005 /* Vreme ARSO Tests */ = {
 			isa = PBXNativeTarget;
@@ -131,6 +226,9 @@
 					63BCD49F2F6C6EC500328CCC = {
 						CreatedOnToolsVersion = 26.2;
 					};
+					63BCD6A62F6D171400328CCC = {
+						CreatedOnToolsVersion = 26.2;
+					};
 					A1B2C3D52F6D000100000005 = {
 						CreatedOnToolsVersion = 26.2;
 						TestTargetID = 63BCD49F2F6C6EC500328CCC;
@@ -153,12 +251,20 @@
 			targets = (
 				63BCD49F2F6C6EC500328CCC /* Vreme ARSO */,
 				A1B2C3D52F6D000100000005 /* Vreme ARSO Tests */,
+				63BCD6A62F6D171400328CCC /* ArsoWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		63BCD49E2F6C6EC500328CCC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		63BCD6A52F6D171400328CCC /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -182,6 +288,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		63BCD6A32F6D171400328CCC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A1B2C3D72F6D000100000007 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -192,6 +305,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		63BCD6B62F6D171600328CCC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 63BCD6A62F6D171400328CCC /* ArsoWidgetExtension */;
+			targetProxy = 63BCD6B52F6D171600328CCC /* PBXContainerItemProxy */;
+		};
 		A1B2C3D82F6D000100000008 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 63BCD49F2F6C6EC500328CCC /* Vreme ARSO */;
@@ -328,8 +446,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Vreme ARSO/Vreme ARSO.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = AX2Z5LF5SG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -363,8 +482,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Vreme ARSO/Vreme ARSO.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = AX2Z5LF5SG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -386,6 +506,68 @@
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		63BCD6BA2F6D171600328CCC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = ArsoWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_TEAM = AX2Z5LF5SG;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ArsoWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ArsoWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.david.Vreme-ARSO.ArsoWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		63BCD6BB2F6D171600328CCC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = ArsoWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_TEAM = AX2Z5LF5SG;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ArsoWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ArsoWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.david.Vreme-ARSO.ArsoWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
@@ -462,6 +644,15 @@
 			buildConfigurations = (
 				63BCD4AC2F6C6EC600328CCC /* Debug */,
 				63BCD4AD2F6C6EC600328CCC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		63BCD6B92F6D171600328CCC /* Build configuration list for PBXNativeTarget "ArsoWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				63BCD6BA2F6D171600328CCC /* Debug */,
+				63BCD6BB2F6D171600328CCC /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
