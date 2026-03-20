@@ -380,10 +380,30 @@ final class HomeViewModel: ObservableObject {
                 observations: observations
             )
 
-            guard let resolvedLocation,
-                  let observation = resolvedLocation.observation ?? observations.first else {
+            guard let resolvedLocation else {
                 throw ARSOError.parsingFailed("Za izbrano lokacijo trenutno ni vremenskih podatkov.")
             }
+
+            let locationConditions = try? await container.locationForecastService.fetchCurrentConditions(for: resolvedLocation)
+            let stationFallbackObservation = resolvedLocation.observation ?? observations.first
+            let observation = mergedObservation(
+                primary: locationConditions?.observation,
+                fallback: stationFallbackObservation,
+                fallbackStationID: resolvedLocation.nearestStation?.id ?? resolvedLocation.displayName
+            )
+
+            guard let observation else {
+                throw ARSOError.parsingFailed("Za izbrano lokacijo trenutno ni vremenskih podatkov.")
+            }
+
+            let displayLocation = ResolvedForecastLocation(
+                displayName: locationConditions?.locationName ?? resolvedLocation.displayName,
+                detailText: resolvedLocation.detailText,
+                source: resolvedLocation.source,
+                coordinate: resolvedLocation.coordinate,
+                nearestStation: resolvedLocation.nearestStation,
+                observation: observation
+            )
 
             let forecastSections = (try? await forecastTask) ?? []
             let warnings = (try? await warningsTask) ?? []
@@ -393,7 +413,7 @@ final class HomeViewModel: ObservableObject {
                 .compactMap { $0 }
 
             let nextState = State(
-                location: resolvedLocation,
+                location: displayLocation,
                 observation: observation,
                 condition: container.weatherIconProvider.condition(for: observation),
                 summaryForecast: forecastSections.first(where: { $0.type == .napoved }),
@@ -412,6 +432,33 @@ final class HomeViewModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func mergedObservation(
+        primary: CurrentObservation?,
+        fallback: CurrentObservation?,
+        fallbackStationID: String
+    ) -> CurrentObservation? {
+        guard primary != nil || fallback != nil else { return nil }
+
+        return CurrentObservation(
+            stationID: primary?.stationID ?? fallback?.stationID ?? fallbackStationID,
+            timestamp: primary?.timestamp ?? fallback?.timestamp,
+            temperature: primary?.temperature ?? fallback?.temperature,
+            apparentTemperature: primary?.apparentTemperature ?? fallback?.apparentTemperature,
+            humidity: primary?.humidity ?? fallback?.humidity,
+            pressure: primary?.pressure ?? fallback?.pressure,
+            windSpeed: primary?.windSpeed ?? fallback?.windSpeed,
+            windGust: primary?.windGust ?? fallback?.windGust,
+            windDirection: primary?.windDirection ?? fallback?.windDirection,
+            windDirectionDegrees: primary?.windDirectionDegrees ?? fallback?.windDirectionDegrees,
+            precipitation: primary?.precipitation ?? fallback?.precipitation,
+            cloudiness: primary?.cloudiness ?? fallback?.cloudiness,
+            weatherSymbol: primary?.weatherSymbol ?? fallback?.weatherSymbol,
+            weatherDescription: primary?.weatherDescription ?? fallback?.weatherDescription,
+            visibilityKilometers: primary?.visibilityKilometers ?? fallback?.visibilityKilometers,
+            source: primary?.source ?? fallback?.source ?? "ARSO"
+        )
     }
 }
 
