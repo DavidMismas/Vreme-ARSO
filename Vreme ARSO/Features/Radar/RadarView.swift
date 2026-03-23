@@ -86,16 +86,30 @@ final class RadarViewModel: ObservableObject {
             return GeoReferencePlace(
                 name: displayName,
                 latitude: station.latitude,
-                longitude: station.longitude
+                longitude: station.longitude,
+                labelOffset: labelOffset(for: displayName)
             )
         }
     }
 
     private var radarFallbackPlaces: [GeoReferencePlace] {
         [
-            GeoReferencePlace(name: "Ljubljana", latitude: 46.0658, longitude: 14.5172),
-            GeoReferencePlace(name: "Maribor", latitude: 46.48, longitude: 15.6869),
-            GeoReferencePlace(name: "Portorož", latitude: 45.4756, longitude: 13.6206)
+            GeoReferencePlace(name: "Ljubljana", latitude: 46.056946, longitude: 14.505751, labelOffset: labelOffset(for: "Ljubljana")),
+            GeoReferencePlace(name: "Maribor", latitude: 46.554650, longitude: 15.645881, labelOffset: labelOffset(for: "Maribor")),
+            GeoReferencePlace(name: "Portorož", latitude: 45.514290, longitude: 13.592060, labelOffset: labelOffset(for: "Portorož"))
         ]
+    }
+
+    private func labelOffset(for name: String) -> CGSize {
+        switch name {
+        case "Ljubljana":
+            return CGSize(width: 0, height: 22)
+        case "Maribor":
+            return CGSize(width: -10, height: 20)
+        case "Portorož", "Koper":
+            return CGSize(width: 16, height: 16)
+        default:
+            return CGSize(width: 0, height: 20)
+        }
     }
 }

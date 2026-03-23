@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 
 enum SloveniaOverlayData {
@@ -169,6 +170,19 @@ struct GeoReferencePlace: Identifiable, GeoCoordinateRepresentable {
     let name: String
     let latitude: Double
     let longitude: Double
+    let labelOffset: CGSize
 
     var id: String { name }
+
+    init(
+        name: String,
+        latitude: Double,
+        longitude: Double,
+        labelOffset: CGSize = .zero
+    ) {
+        self.name = name
+        self.latitude = latitude
+        self.longitude = longitude
+        self.labelOffset = labelOffset
+    }
 }

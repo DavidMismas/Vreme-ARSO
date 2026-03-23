@@ -234,8 +234,11 @@ private struct SloveniaOutlineOverlay: View {
 
                 ForEach(referencePlaces) { city in
                     if let point = geoReference.normalizedPosition(latitude: city.latitude, longitude: city.longitude) {
-                        CityAnchorLabel(name: city.name)
-                            .position(position(for: point, in: geometry.size))
+                        CityAnchorLabel(
+                            name: city.name,
+                            anchor: rawPosition(for: point, in: geometry.size),
+                            labelOffset: city.labelOffset
+                        )
                     }
                 }
             }
@@ -251,31 +254,33 @@ private struct SloveniaOutlineOverlay: View {
 
         return Path { path in
             let first = projected[0]
-            path.move(to: position(for: first, in: size))
+            path.move(to: rawPosition(for: first, in: size))
 
             for point in projected.dropFirst() {
-                path.addLine(to: position(for: point, in: size))
+                path.addLine(to: rawPosition(for: point, in: size))
             }
         }
     }
 
-    private func position(for point: CGPoint, in size: CGSize) -> CGPoint {
+    private func rawPosition(for point: CGPoint, in size: CGSize) -> CGPoint {
         let visibleRect = cropRect ?? CGRect(x: 0, y: 0, width: 1, height: 1)
         let normalizedX = (point.x - visibleRect.minX) / max(visibleRect.width, 0.001)
         let normalizedY = (point.y - visibleRect.minY) / max(visibleRect.height, 0.001)
 
         return CGPoint(
-            x: min(max(normalizedX * size.width, 16), size.width - 16),
-            y: min(max(normalizedY * size.height, 16), size.height - 16)
+            x: normalizedX * size.width,
+            y: normalizedY * size.height
         )
     }
 }
 
 private struct CityAnchorLabel: View {
     let name: String
+    let anchor: CGPoint
+    let labelOffset: CGSize
 
     var body: some View {
-        VStack(spacing: 4) {
+        ZStack(alignment: .topLeading) {
             Circle()
                 .fill(.white)
                 .frame(width: 6, height: 6)
@@ -283,6 +288,7 @@ private struct CityAnchorLabel: View {
                     Circle()
                         .stroke(Color.black.opacity(0.5), lineWidth: 1)
                 }
+                .position(anchor)
 
             Text(name)
                 .font(.caption2.weight(.semibold))
@@ -291,7 +297,15 @@ private struct CityAnchorLabel: View {
                 .padding(.horizontal, 7)
                 .padding(.vertical, 4)
                 .background(Color.black.opacity(0.72), in: Capsule())
+                .position(labelPosition)
         }
         .shadow(color: Color.black.opacity(0.28), radius: 5, y: 2)
+    }
+
+    private var labelPosition: CGPoint {
+        CGPoint(
+            x: anchor.x + labelOffset.width,
+            y: anchor.y + labelOffset.height
+        )
     }
 }
