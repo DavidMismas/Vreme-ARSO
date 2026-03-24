@@ -33,16 +33,19 @@ struct ArsoWidgetEntryView: View {
     let entry: ArsoWidgetEntry
 
     var body: some View {
-        switch family {
-        case .systemSmall:
-            SmallCurrentWidgetView(content: entry.content)
-        case .systemMedium:
-            MediumForecastWidgetView(content: entry.content, maxDays: 5)
-        case .systemLarge:
-            LargeForecastWidgetView(content: entry.content, maxDays: 5)
-        default:
-            SmallCurrentWidgetView(content: entry.content)
+        Group {
+            switch family {
+            case .systemSmall:
+                SmallCurrentWidgetView(content: entry.content)
+            case .systemMedium:
+                MediumForecastWidgetView(content: entry.content, maxDays: 5)
+            case .systemLarge:
+                LargeForecastWidgetView(content: entry.content, maxDays: 5)
+            default:
+                SmallCurrentWidgetView(content: entry.content)
+            }
         }
+        .widgetContainerBackground()
     }
 }
 
@@ -52,7 +55,6 @@ struct ArsoCurrentWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: ArsoWidgetProvider()) { entry in
             ArsoWidgetEntryView(entry: entry)
-                .applyWidgetBackground()
         }
         .configurationDisplayName("ARSO trenutno")
         .description("Trenutna temperatura in stanje za tvojo lokacijo.")
@@ -66,7 +68,6 @@ struct ArsoForecastMediumWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: ArsoWidgetProvider()) { entry in
             ArsoWidgetEntryView(entry: entry)
-                .applyWidgetBackground()
         }
         .configurationDisplayName("ARSO 5 dni")
         .description("Petdnevna grafična napoved za izbrano lokacijo.")
@@ -80,7 +81,6 @@ struct ArsoForecastLargeWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: ArsoWidgetProvider()) { entry in
             ArsoWidgetEntryView(entry: entry)
-                .applyWidgetBackground()
         }
         .configurationDisplayName("ARSO podrobno")
         .description("Petdnevna napoved, opozorila in kratek uporaben povzetek.")
@@ -92,31 +92,42 @@ private struct SmallCurrentWidgetView: View {
     let content: WidgetWeatherContent
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top) {
+        ZStack(alignment: .topTrailing) {
+            WeatherGlyph(condition: content.currentCondition, size: 24)
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(content.locationName)
                         .font(.headline)
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.72)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
                     Text(content.isFallbackLocation ? "Privzeta lokacija" : "Trenutna lokacija")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
-                Spacer(minLength: 8)
-                WeatherGlyph(condition: content.currentCondition, size: 28)
+
+                Spacer(minLength: 0)
+
+                Text(content.currentTemperatureText)
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Text(content.currentSummary)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
             }
-
-            Spacer(minLength: 0)
-
-            Text(content.currentTemperatureText)
-                .font(.system(size: 38, weight: .bold, design: .rounded))
-                .minimumScaleFactor(0.75)
-
-            Text(content.currentSummary)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
+            .padding(.trailing, 30)
         }
+        .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 }
@@ -134,6 +145,7 @@ private struct MediumForecastWidgetView: View {
                 }
             }
         }
+        .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
     
@@ -184,6 +196,7 @@ private struct LargeForecastWidgetView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
@@ -222,7 +235,7 @@ private struct LargeForecastWidgetView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(warning.color.opacity(0.12))
+                .fill(warning.color.opacity(0.16))
         )
     }
 
@@ -261,18 +274,48 @@ private struct WidgetForecastColumn: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(WidgetTheme.tile)
+        )
     }
+}
+
+private enum WidgetTheme {
+    static let skyBlue = Color(red: 54 / 255, green: 135 / 255, blue: 201 / 255)
+    static let mintGreen = Color(red: 163 / 255, green: 227 / 255, blue: 161 / 255)
+    static let border = skyBlue.opacity(0.22)
+    static let tile = LinearGradient(
+        colors: [
+            skyBlue.opacity(0.12),
+            mintGreen.opacity(0.16)
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    static let background = LinearGradient(
+        colors: [
+            skyBlue.opacity(0.22),
+            mintGreen.opacity(0.28),
+            Color.white.opacity(0.96)
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
 }
 
 private extension View {
     @ViewBuilder
-    func applyWidgetBackground() -> some View {
+    func widgetContainerBackground() -> some View {
         if #available(iOS 17.0, *) {
-            containerBackground(.fill.tertiary, for: .widget)
+            containerBackground(for: .widget) {
+                WidgetTheme.background
+            }
         } else {
-            padding()
-                .background()
+            padding(0)
+                .background(WidgetTheme.background)
         }
     }
 }

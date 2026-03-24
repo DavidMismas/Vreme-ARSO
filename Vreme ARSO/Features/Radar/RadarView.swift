@@ -26,8 +26,10 @@ struct RadarView: View {
                     overlayConfiguration: GeoOverlayConfiguration(
                         referencePlaces: viewModel.referencePlaces,
                         cropToSlovenia: true,
-                        caption: "ARSO referenčne postaje pomagajo pri orientaciji radarskega prikaza."
-                    )
+                        caption: nil,
+                        cropPadding: .sloveniaFocused
+                    ),
+                    legend: .radarReflectivity
                 )
                 .padding()
             }

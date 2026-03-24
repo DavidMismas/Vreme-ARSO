@@ -3,19 +3,28 @@ import Foundation
 
 struct WidgetWeatherLoader {
     private let session: URLSession = .shared
+    private let contentCache = WidgetContentCache.shared
 
     func loadContent() async -> WidgetWeatherContent {
         do {
             let preference = readPreferredLocation()
+            let preferenceKey = cacheKey(for: preference)
+
+            if let cachedContent = await contentCache.content(for: preferenceKey, maxAge: 10 * 60) {
+                return cachedContent
+            }
+
             let resolved = try await resolveLocation(preference: preference)
             let forecastPayload = try await fetchJSON(from: resolved.forecastURL)
             let nonlocationPayload = try? await fetchJSON(from: URL(string: "https://vreme.arso.gov.si/api/1.0/nonlocation/?lang=sl")!)
-            return try parseContent(
+            let content = try parseContent(
                 forecastPayload: forecastPayload,
                 nonlocationPayload: nonlocationPayload,
                 preferredDisplayName: resolved.displayName,
                 fallbackLocation: resolved.isFallback
             )
+            await contentCache.store(content, for: preferenceKey)
+            return content
         } catch {
             return .placeholder
         }
@@ -128,6 +137,7 @@ struct WidgetWeatherLoader {
 
     private func fetchJSON(from url: URL) async throws -> [String: Any] {
         var request = URLRequest(url: url)
+        request.cachePolicy = .useProtocolCachePolicy
         request.timeoutInterval = 20
         request.setValue("VremeARSOWidget/1.0 (iOS WidgetKit)", forHTTPHeaderField: "User-Agent")
 
@@ -141,6 +151,23 @@ struct WidgetWeatherLoader {
         }
 
         return json
+    }
+
+    private func cacheKey(for preference: WidgetLocationPreference) -> String {
+        [
+            preference.useSelectedFavoriteStation ? "favorite" : "nofavorite",
+            preference.selectedStationName ?? "",
+            coordinateString(preference.selectedStationCoordinate),
+            preference.useCurrentLocation ? "current" : "manual",
+            preference.manualLocationName ?? "",
+            coordinateString(preference.manualCoordinate),
+            coordinateString(preference.currentCoordinate)
+        ].joined(separator: "|")
+    }
+
+    private func coordinateString(_ coordinate: CLLocationCoordinate2D?) -> String {
+        guard let coordinate else { return "" }
+        return "\(coordinate.latitude),\(coordinate.longitude)"
     }
 
     private func parseContent(

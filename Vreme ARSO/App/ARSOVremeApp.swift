@@ -6,6 +6,10 @@ struct ARSOVremeApp: App {
     @StateObject private var settingsStore = SettingsStore()
     @StateObject private var locationService = LocationService()
 
+    init() {
+        AppTheme.configureAppearance()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView(
@@ -13,6 +17,7 @@ struct ARSOVremeApp: App {
                 settingsStore: settingsStore,
                 locationService: locationService
             )
+            .preferredColorScheme(.dark)
         }
     }
 }

@@ -79,9 +79,10 @@ struct ForecastTextView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding()
                     }
+                    .appScreenBackground()
                 }
             }
-            .navigationTitle("Tekstovna napoved")
+            .navigationTitle("Napoved")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
@@ -107,6 +108,7 @@ struct ForecastTextView: View {
                 await viewModel.load()
                 configureDefaultExpansionIfNeeded()
             }
+            .appScreenBackground()
         }
     }
 

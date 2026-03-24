@@ -33,6 +33,7 @@ struct LocationForecastView: View {
                     .padding()
                 }
                 .scrollIndicators(.hidden)
+                .appScreenBackground()
             } else if !viewModel.fallbackSections.isEmpty {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
@@ -55,6 +56,7 @@ struct LocationForecastView: View {
                     .padding()
                 }
                 .scrollIndicators(.hidden)
+                .appScreenBackground()
             } else if let errorMessage = viewModel.errorMessage {
                 ErrorStateView(message: errorMessage) {
                     Task { await viewModel.load() }
@@ -71,6 +73,7 @@ struct LocationForecastView: View {
         .task {
             await viewModel.load()
         }
+        .appScreenBackground()
     }
 
     private func reportHeader(_ report: LocationDailyForecastReport) -> some View {

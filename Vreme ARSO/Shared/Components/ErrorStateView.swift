@@ -23,5 +23,7 @@ struct ErrorStateView: View {
                 Button(retryTitle, action: action)
             }
         }
+        .tint(AppTheme.Colors.accent)
+        .appScreenBackground()
     }
 }

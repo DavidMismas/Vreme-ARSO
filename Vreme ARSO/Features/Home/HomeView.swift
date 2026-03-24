@@ -18,34 +18,36 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             contentView
-            .navigationTitle("Vreme ARSO")
-            .animation(.easeInOut(duration: 0.22), value: viewModel.state?.location.displayName)
-            .task {
-                await load()
-                locationService.requestAccessIfNeeded()
-                locationService.refreshLocation()
-            }
-            .onChange(of: settingsStore.useCurrentLocation) { _, _ in
-                reloadHome()
-            }
-            .onChange(of: settingsStore.selectedStationID) { _, _ in
-                reloadHome()
-            }
-            .onChange(of: settingsStore.useSelectedFavoriteStationForPrimaryViews) { _, _ in
-                reloadHome()
-            }
-            .onChange(of: settingsStore.manualLocationName) { _, _ in
-                reloadHome()
-            }
-            .onChange(of: settingsStore.manualLocationLatitude) { _, _ in
-                reloadHome()
-            }
-            .onChange(of: settingsStore.favoriteStationIDs) { _, _ in
-                reloadHome()
-            }
-            .onChange(of: locationService.currentLocation) { _, _ in
-                reloadHome()
-            }
+                .navigationTitle("Vreme")
+                .navigationBarTitleDisplayMode(.inline)
+                .animation(.easeInOut(duration: 0.22), value: viewModel.state?.location.displayName)
+                .task {
+                    await load()
+                    locationService.requestAccessIfNeeded()
+                    locationService.refreshLocation()
+                }
+                .onChange(of: settingsStore.useCurrentLocation) { _, _ in
+                    reloadHome()
+                }
+                .onChange(of: settingsStore.selectedStationID) { _, _ in
+                    reloadHome()
+                }
+                .onChange(of: settingsStore.useSelectedFavoriteStationForPrimaryViews) { _, _ in
+                    reloadHome()
+                }
+                .onChange(of: settingsStore.manualLocationName) { _, _ in
+                    reloadHome()
+                }
+                .onChange(of: settingsStore.manualLocationLatitude) { _, _ in
+                    reloadHome()
+                }
+                .onChange(of: settingsStore.favoriteStationIDs) { _, _ in
+                    reloadHome()
+                }
+                .onChange(of: locationService.currentLocation) { _, _ in
+                    reloadHome()
+                }
+                .appScreenBackground()
         }
     }
 
@@ -60,7 +62,7 @@ struct HomeView: View {
                 reloadHome()
             }
         } else {
-            ContentUnavailableView("Ni podatkov", systemImage: "cloud.slash")
+            ContentUnavailableView("Ni podatkov", systemImage: "icloud.slash")
         }
     }
 
@@ -94,6 +96,7 @@ struct HomeView: View {
         .refreshable {
             await load()
         }
+        .appScreenBackground()
     }
 
     private func heroSection(_ state: HomeViewModel.State) -> some View {
@@ -142,7 +145,7 @@ struct HomeView: View {
                         .padding(.vertical, 10)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(AppTheme.Colors.groupedBackground)
+                                .fill(AppTheme.Colors.accent.opacity(0.16))
                         )
                 }
                 .buttonStyle(.plain)
@@ -153,9 +156,14 @@ struct HomeView: View {
         .padding(24)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(AppTheme.Colors.cardBackground)
+            AppTheme.Colors.cardGradient,
+            in: RoundedRectangle(cornerRadius: 28, style: .continuous)
         )
+        .overlay {
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(AppTheme.Colors.border.opacity(0.95), lineWidth: 1)
+        }
+        .shadow(color: AppTheme.Colors.accent.opacity(0.12), radius: 20, y: 9)
     }
 
     private func metricsSection(_ state: HomeViewModel.State) -> some View {
@@ -227,7 +235,7 @@ struct HomeView: View {
 
     private func imagerySection(_ state: HomeViewModel.State) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Prikazi")
+            Text("Grafične animacije")
                 .font(.title3.weight(.semibold))
 
             NavigationLink {
@@ -238,7 +246,9 @@ struct HomeView: View {
                     subtitle: state.radarPreview?.timestamp.map(DateFormatterSI.displayDateTime.string(from:)) ?? "Zadnji prikaz",
                     imageURL: state.radarPreview?.imageURL,
                     cache: container.imageCacheService,
-                    systemImage: "dot.radiowaves.left.and.right"
+                    systemImage: "dot.radiowaves.left.and.right",
+                    geoReference: state.radarPreview?.geoReference,
+                    cropToSlovenia: true
                 )
             }
             .buttonStyle(.plain)
@@ -251,7 +261,9 @@ struct HomeView: View {
                     subtitle: state.satellitePreview?.timestamp.map(DateFormatterSI.displayDateTime.string(from:)) ?? "Zadnja slika",
                     imageURL: state.satellitePreview?.imageURL,
                     cache: container.imageCacheService,
-                    systemImage: "globe.europe.africa"
+                    systemImage: "globe.europe.africa",
+                    geoReference: nil,
+                    cropToSlovenia: false
                 )
             }
             .buttonStyle(.plain)
@@ -299,6 +311,12 @@ private struct ImageryPreviewCard: View {
     let imageURL: URL?
     let cache: ImageCacheService
     let systemImage: String
+    let geoReference: FrameGeoReference?
+    let cropToSlovenia: Bool
+
+    private var isRadarPreview: Bool {
+        systemImage == "dot.radiowaves.left.and.right"
+    }
 
     var body: some View {
         HStack(spacing: 14) {
@@ -331,19 +349,45 @@ private struct ImageryPreviewCard: View {
 
     @ViewBuilder
     private var preview: some View {
-        Group {
-            if let imageURL {
-                RemoteCachedImage(url: imageURL, cache: cache, contentMode: .fill)
-            } else {
-                Color.secondary.opacity(0.08)
-                    .overlay {
-                        Image(systemName: systemImage)
-                            .foregroundStyle(.secondary)
-                    }
+        ZStack {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(isRadarPreview ? Color.black.opacity(0.12) : Color.secondary.opacity(0.08))
+
+            Group {
+                if let imageURL {
+                    RemoteCachedImage(
+                        url: imageURL,
+                        cache: cache,
+                        contentMode: .fill,
+                        normalizedCropRect: cropRect
+                    )
+                } else {
+                    Image(systemName: systemImage)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .frame(width: 116, height: 84)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private var cropRect: CGRect? {
+        guard cropToSlovenia, let geoReference else { return nil }
+
+        let borderRect = geoReference.normalizedBounds(for: SloveniaOverlayData.border)
+        guard let borderRect else { return nil }
+
+        let minX = max(0, borderRect.minX - 0.03)
+        let minY = max(0, borderRect.minY - 0.03)
+        let maxX = min(1, borderRect.maxX + 0.03)
+        let maxY = min(1, borderRect.maxY + 0.06)
+
+        return CGRect(
+            x: minX,
+            y: minY,
+            width: max(maxX - minX, 0.001),
+            height: max(maxY - minY, 0.001)
+        )
     }
 }
 

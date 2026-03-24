@@ -26,48 +26,93 @@ struct CurrentWeatherView: View {
                         NavigationLink {
                             CurrentWeatherDetailView(row: row)
                         } label: {
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    WeatherSymbolView(condition: row.condition, size: 20)
-
-                                    Text(row.station.name)
-                                        .font(.headline)
-                                    if row.station.isFavorite {
-                                        Image(systemName: "star.fill")
-                                            .foregroundStyle(.yellow)
-                                    }
-                                    Spacer()
-                                    Text(NumberFormatterSI.string(from: row.observation.temperature, suffix: "°C"))
-                                        .font(.title3.weight(.semibold))
-                                }
-                                Text(row.observation.weatherDescription ?? "Brez opisa")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button {
-                                    settingsStore.toggleFavorite(stationID: row.station.id)
-                                    Task {
-                                        await viewModel.load(favorites: settingsStore.favoriteStationIDs)
-                                    }
-                                } label: {
-                                    Label(row.station.isFavorite ? "Odstrani" : "Priljubljena", systemImage: row.station.isFavorite ? "star.slash" : "star")
-                                }
-                                .tint(.yellow)
-                            }
+                            CurrentWeatherRowCard(row: row)
                         }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button {
+                                settingsStore.toggleFavorite(stationID: row.station.id)
+                                Task {
+                                    await viewModel.load(favorites: settingsStore.favoriteStationIDs)
+                                }
+                            } label: {
+                                Label(row.station.isFavorite ? "Odstrani" : "Priljubljena", systemImage: row.station.isFavorite ? "star.slash" : "star")
+                            }
+                            .tint(.yellow)
+                        }
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                     }
                     .searchable(text: $viewModel.searchText, prompt: "Išči po kraju ali postaji")
                     .refreshable {
                         await viewModel.load(favorites: settingsStore.favoriteStationIDs)
                     }
+                    .scrollContentBackground(.hidden)
+                    .listStyle(.plain)
+                    .background(AppTheme.Colors.screenGradient.ignoresSafeArea())
                 }
             }
-            .navigationTitle("Trenutne razmere")
+            .navigationTitle("Razmere")
+            .navigationBarTitleDisplayMode(.inline)
             .task {
                 await viewModel.load(favorites: settingsStore.favoriteStationIDs)
             }
+            .appScreenBackground()
         }
+    }
+}
+
+private struct CurrentWeatherRowCard: View {
+    let row: CurrentWeatherViewModel.Row
+
+    var body: some View {
+        HStack(spacing: 14) {
+            WeatherSymbolView(condition: row.condition, size: 22)
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Text(row.station.name)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+
+                    if row.station.isFavorite {
+                        Image(systemName: "star.fill")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.Colors.accentSecondary)
+                    }
+                }
+
+                Text(row.observation.weatherDescription ?? "Brez opisa")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 12)
+
+            VStack(alignment: .trailing, spacing: 8) {
+                Text(NumberFormatterSI.string(from: row.observation.temperature, suffix: "°C"))
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.primary)
+
+                Image(systemName: "chevron.right")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.Colors.screenBackground.opacity(0.88))
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .background(
+            AppTheme.Colors.cardGradient,
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(AppTheme.Colors.border.opacity(0.95), lineWidth: 1)
+        }
+        .shadow(color: AppTheme.Colors.accent.opacity(0.08), radius: 10, y: 4)
     }
 }
 
@@ -108,6 +153,7 @@ private struct CurrentWeatherDetailView: View {
         }
         .navigationTitle(row.station.name)
         .navigationBarTitleDisplayMode(.inline)
+        .appListStyle()
     }
 }
 

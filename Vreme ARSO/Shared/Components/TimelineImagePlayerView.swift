@@ -13,13 +13,32 @@ extension GraphicFrame: TimelineFrameRepresentable {}
 struct GeoOverlayConfiguration {
     let referencePlaces: [GeoReferencePlace]
     let cropToSlovenia: Bool
-    let caption: String
+    let caption: String?
+    let cropPadding: GeoCropPadding
 
     static let generic = GeoOverlayConfiguration(
         referencePlaces: SloveniaOverlayData.anchorCities,
         cropToSlovenia: false,
-        caption: "Obris Slovenije pomaga pri orientaciji prikaza."
+        caption: nil,
+        cropPadding: .default
     )
+
+    static let sloveniaFocused = GeoOverlayConfiguration(
+        referencePlaces: SloveniaOverlayData.anchorCities,
+        cropToSlovenia: true,
+        caption: nil,
+        cropPadding: .sloveniaFocused
+    )
+}
+
+struct GeoCropPadding {
+    let top: CGFloat
+    let leading: CGFloat
+    let bottom: CGFloat
+    let trailing: CGFloat
+
+    static let `default` = GeoCropPadding(top: 0.08, leading: 0.06, bottom: 0.12, trailing: 0.08)
+    static let sloveniaFocused = GeoCropPadding(top: 0.03, leading: 0.03, bottom: 0.06, trailing: 0.03)
 }
 
 struct TimelineImagePlayerView<Frame: TimelineFrameRepresentable>: View {
@@ -27,6 +46,8 @@ struct TimelineImagePlayerView<Frame: TimelineFrameRepresentable>: View {
     let frames: [Frame]
     let cache: ImageCacheService
     let overlayConfiguration: GeoOverlayConfiguration
+    let legend: TimelineLegend?
+    let imageDisplayStyle: RemoteImageDisplayStyle
 
     @State private var selectedIndex = 0
     @State private var isPlaying = false
@@ -38,12 +59,16 @@ struct TimelineImagePlayerView<Frame: TimelineFrameRepresentable>: View {
         title: String,
         frames: [Frame],
         cache: ImageCacheService,
-        overlayConfiguration: GeoOverlayConfiguration = .generic
+        overlayConfiguration: GeoOverlayConfiguration = .generic,
+        legend: TimelineLegend? = nil,
+        imageDisplayStyle: RemoteImageDisplayStyle = .default
     ) {
         self.title = title
         self.frames = frames
         self.cache = cache
         self.overlayConfiguration = overlayConfiguration
+        self.legend = legend
+        self.imageDisplayStyle = imageDisplayStyle
     }
 
     var body: some View {
@@ -54,12 +79,13 @@ struct TimelineImagePlayerView<Frame: TimelineFrameRepresentable>: View {
 
                     ZStack(alignment: .topLeading) {
                         RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .fill(Color(uiColor: .secondarySystemBackground))
+                            .fill(AppTheme.Colors.cardBackground)
 
                         RemoteCachedImage(
                             url: frame.imageURL,
                             cache: cache,
-                            normalizedCropRect: cropRect
+                            normalizedCropRect: cropRect,
+                            displayStyle: imageDisplayStyle
                         )
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
@@ -80,8 +106,8 @@ struct TimelineImagePlayerView<Frame: TimelineFrameRepresentable>: View {
                             .stroke(Color.white.opacity(0.08), lineWidth: 1)
                     )
 
-                    if frame.geoReference != nil {
-                        Label(overlayConfiguration.caption, systemImage: "map")
+                    if let caption = overlayConfiguration.caption, frame.geoReference != nil {
+                        Label(caption, systemImage: "map")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -114,6 +140,10 @@ struct TimelineImagePlayerView<Frame: TimelineFrameRepresentable>: View {
                         in: 0...Double(max(frames.count - 1, 0)),
                         step: 1
                     )
+                }
+
+                if let legend {
+                    TimelineLegendView(legend: legend)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -161,16 +191,16 @@ struct TimelineImagePlayerView<Frame: TimelineFrameRepresentable>: View {
 
         let borderRect = geoReference.normalizedBounds(for: SloveniaOverlayData.border)
         let placesRect = geoReference.normalizedBounds(for: overlayConfiguration.referencePlaces)
-        let combined = union(borderRect, placesRect)
+        let combined = borderRect ?? union(borderRect, placesRect)
 
         guard let combined else { return nil }
 
         return expandedRect(
             combined,
-            top: 0.08,
-            leading: 0.06,
-            bottom: 0.12,
-            trailing: 0.08
+            top: overlayConfiguration.cropPadding.top,
+            leading: overlayConfiguration.cropPadding.leading,
+            bottom: overlayConfiguration.cropPadding.bottom,
+            trailing: overlayConfiguration.cropPadding.trailing
         )
     }
 
@@ -205,6 +235,52 @@ struct TimelineImagePlayerView<Frame: TimelineFrameRepresentable>: View {
             width: max(maxX - minX, 0.001),
             height: max(maxY - minY, 0.001)
         )
+    }
+}
+
+private struct TimelineLegendView: View {
+    let legend: TimelineLegend
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(legend.title)
+                .font(.headline)
+
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 108), spacing: 12, alignment: .top)],
+                alignment: .leading,
+                spacing: 12
+            ) {
+                ForEach(legend.items) { item in
+                    VStack(alignment: .leading, spacing: 8) {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(item.color)
+                            .frame(height: 14)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                            }
+
+                        Text(item.label)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+
+            if let footnote = legend.footnote {
+                Text(footnote)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(14)
+        .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(AppTheme.Colors.border.opacity(0.85), lineWidth: 1)
+        }
     }
 }
 

@@ -26,6 +26,11 @@ struct CardSection<Content: View>: View {
         }
         .padding(AppTheme.Metrics.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppTheme.Colors.cardBackground, in: RoundedRectangle(cornerRadius: AppTheme.Metrics.cardCornerRadius, style: .continuous))
+        .background(AppTheme.Colors.cardGradient, in: RoundedRectangle(cornerRadius: AppTheme.Metrics.cardCornerRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: AppTheme.Metrics.cardCornerRadius, style: .continuous)
+                .stroke(AppTheme.Colors.border.opacity(0.95), lineWidth: 1)
+        }
+        .shadow(color: AppTheme.Colors.accent.opacity(0.10), radius: 14, y: 7)
     }
 }

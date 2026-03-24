@@ -34,6 +34,7 @@ struct MountainConditionsView: View {
                 .refreshable {
                     await viewModel.load()
                 }
+                .appScreenBackground()
             } else {
                 ContentUnavailableView(
                     "Razmere v gorah niso na voljo",
@@ -46,6 +47,7 @@ struct MountainConditionsView: View {
         .task {
             await viewModel.load()
         }
+        .appScreenBackground()
     }
 }
 

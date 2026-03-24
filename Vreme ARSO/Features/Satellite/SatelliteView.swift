@@ -52,6 +52,7 @@ struct SatelliteView: View {
                 .onDisappear {
                     viewModel.pause()
                 }
+                .appScreenBackground()
             } else {
                 ContentUnavailableView(
                     "Satelitski prikaz ni na voljo",
@@ -64,6 +65,7 @@ struct SatelliteView: View {
         .task {
             await viewModel.load()
         }
+        .appScreenBackground()
     }
 }
 

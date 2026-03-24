@@ -44,19 +44,8 @@ struct StationsMapView: View {
                     }
                 }
                 .mapStyle(.standard)
-                .ignoresSafeArea(edges: .bottom)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Zemljevid postaj")
-                            .font(.title2.weight(.semibold))
-                        Text(selectedStation?.station.name ?? "Tapnite postajo za podrobnosti.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(14)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-
                     Spacer()
 
                     Button {
@@ -79,7 +68,7 @@ struct StationsMapView: View {
                 .padding()
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
-            .navigationTitle("Zemljevid postaj")
+            .navigationTitle("Zemljevid")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(item: $selectedStation) { station in
                 NavigationStack {
@@ -98,6 +87,7 @@ struct StationsMapView: View {
                     }
                     .navigationTitle(station.station.name)
                     .navigationBarTitleDisplayMode(.inline)
+                    .appListStyle()
                 }
                 .presentationDetents([.medium, .large])
             }
@@ -119,9 +109,9 @@ private struct StationMapAnnotationView: View {
         VStack(spacing: 6) {
             Image(systemName: isSelected ? "mappin.circle.fill" : "mappin.circle")
                 .font(.title2)
-                .foregroundStyle(isSelected ? AppTheme.Colors.accent : .white)
+                .foregroundStyle(.white)
                 .padding(4)
-                .background(Color.black.opacity(isSelected ? 0.68 : 0.56), in: Circle())
+                .background((isSelected ? AppTheme.Colors.accent : AppTheme.Colors.mapAnnotationBackground), in: Circle())
 
             if isSelected || isFavorite {
                 Text(name)
@@ -130,7 +120,7 @@ private struct StationMapAnnotationView: View {
                     .lineLimit(1)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 5)
-                    .background(Color.black.opacity(0.74), in: Capsule())
+                    .background(AppTheme.Colors.mapAnnotationLabelBackground, in: Capsule())
             }
         }
         .shadow(color: Color.black.opacity(0.24), radius: 8, y: 3)

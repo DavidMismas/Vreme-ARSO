@@ -90,6 +90,9 @@ struct SettingsView: View {
                 Text("Radar in satelit se nalagata po potrebi, slike pa ostajajo v lokalnem cache-u za bolj miren UX.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Text("Aplikacija se namenoma ne osvežuje prepogosto. Klici do ARSO virov so omejeni, da ne pride do preobremenitve ali IP blokade.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Priljubljene postaje") {
@@ -105,8 +108,8 @@ struct SettingsView: View {
 
             Section("O aplikaciji") {
                 SourceBadge()
-                Text("Aplikacija uporablja javne ARSO XML, RSS, HTML in stabilne slikovne vire.")
-                Text("Nova ARSO stran služi kot UX referenca, ne kot embedded frontend.")
+                Text("Aplikacija uporablja javno dostopne vremenske podatke ARSO.")
+                Text("Prikazi in vsebina so prilagojeni za prijaznejšo uporabo na telefonu.")
                     .foregroundStyle(.secondary)
             }
         }
@@ -114,6 +117,7 @@ struct SettingsView: View {
         .task {
             await loadStations()
         }
+        .appListStyle()
     }
 
     private func loadStations() async {

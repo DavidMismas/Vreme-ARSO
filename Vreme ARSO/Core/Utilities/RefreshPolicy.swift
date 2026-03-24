@@ -8,11 +8,11 @@ enum RefreshPolicy {
     var interval: TimeInterval {
         switch self {
         case .currentConditions:
-            return 15 * 60
+            return 60
         case .forecastText:
-            return 60 * 60
+            return 30 * 60
         case .imagery:
-            return 5 * 60
+            return 3 * 60
         }
     }
 }

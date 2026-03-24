@@ -6,6 +6,7 @@ struct RemoteCachedImage: View {
     let cache: ImageCacheService
     let contentMode: ContentMode
     let normalizedCropRect: CGRect?
+    let displayStyle: RemoteImageDisplayStyle
 
     @State private var uiImage: UIImage?
     @State private var loadedURL: URL?
@@ -15,12 +16,14 @@ struct RemoteCachedImage: View {
         url: URL,
         cache: ImageCacheService,
         contentMode: ContentMode = .fit,
-        normalizedCropRect: CGRect? = nil
+        normalizedCropRect: CGRect? = nil,
+        displayStyle: RemoteImageDisplayStyle = .default
     ) {
         self.url = url
         self.cache = cache
         self.contentMode = contentMode
         self.normalizedCropRect = normalizedCropRect
+        self.displayStyle = displayStyle
     }
 
     var body: some View {
@@ -58,12 +61,14 @@ struct RemoteCachedImage: View {
                         x: -cropRect.minX * width,
                         y: -cropRect.minY * height
                     )
+                    .modifier(RemoteImageDisplayModifier(style: displayStyle))
             }
             .clipped()
         } else {
             Image(uiImage: image)
                 .resizable()
                 .aspectRatio(contentMode: contentMode)
+                .modifier(RemoteImageDisplayModifier(style: displayStyle))
         }
     }
 
@@ -88,6 +93,27 @@ struct RemoteCachedImage: View {
             loadedURL = targetURL
         } catch {
             NSLog("Slike ni bilo mogoče naložiti: %@", error.localizedDescription)
+        }
+    }
+}
+
+enum RemoteImageDisplayStyle {
+    case `default`
+    case cloudiness
+}
+
+private struct RemoteImageDisplayModifier: ViewModifier {
+    let style: RemoteImageDisplayStyle
+
+    func body(content: Content) -> some View {
+        switch style {
+        case .default:
+            content
+        case .cloudiness:
+            content
+                .saturation(0.2)
+                .contrast(1.65)
+                .brightness(-0.12)
         }
     }
 }

@@ -49,9 +49,12 @@ struct WaterTemperaturesView: View {
 
                         if let statusMessage = report.statusMessage {
                             CardSection(title: "Reke in jezera", systemImage: "drop.triangle") {
-                                Text(statusMessage)
+                                Text("ARSO trenutno objavlja samo temperaturo morja. Podatki za reke in jezera so začasno nedosegljivi.")
                                     .font(.body)
-                                Text("Morje še vedno prikazujemo iz stabilnega obalnega ARSO feeda.")
+                                Text(statusMessage)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Text("Morje še vedno prikazujemo iz stabilnega obalnega ARSO vira.")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -97,11 +100,12 @@ struct WaterTemperaturesView: View {
                 .refreshable {
                     await viewModel.load()
                 }
+                .appScreenBackground()
             } else {
                 ContentUnavailableView(
                     "Temperature voda niso na voljo",
                     systemImage: "water.waves",
-                    description: Text("ARSO trenutno ne vrne uporabnega prikaza za ta sklop.")
+                    description: Text("ARSO trenutno objavlja samo temperaturo morja. Podatki za reke in jezera so začasno nedosegljivi.")
                 )
             }
         }
@@ -109,6 +113,7 @@ struct WaterTemperaturesView: View {
         .task {
             await viewModel.load()
         }
+        .appScreenBackground()
     }
 }
 

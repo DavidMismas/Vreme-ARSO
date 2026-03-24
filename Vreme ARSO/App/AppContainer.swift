@@ -16,6 +16,7 @@ struct AppContainer {
     let satelliteService: ARSOSatelliteService
     let waterTemperaturesService: ARSOWaterTemperaturesService
     let mountainConditionsService: ARSOMountainConditionsService
+    let skiConditionsService: ARSOSkiConditionsService
     let graphicForecastService: ARSOGraphicForecastService
     let locationForecastService: ARSOLocationForecastService
 
@@ -50,6 +51,7 @@ struct AppContainer {
             satelliteService: ARSOSatelliteService(apiClient: apiClient),
             waterTemperaturesService: ARSOWaterTemperaturesService(apiClient: apiClient),
             mountainConditionsService: ARSOMountainConditionsService(apiClient: apiClient),
+            skiConditionsService: ARSOSkiConditionsService(apiClient: apiClient, xmlParser: xmlParserService),
             graphicForecastService: ARSOGraphicForecastService(apiClient: apiClient),
             locationForecastService: ARSOLocationForecastService(apiClient: apiClient)
         )
