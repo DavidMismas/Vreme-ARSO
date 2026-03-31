@@ -22,9 +22,8 @@ struct HomeView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .animation(.easeInOut(duration: 0.22), value: viewModel.state?.location.displayName)
                 .task {
-                    await load()
                     locationService.requestAccessIfNeeded()
-                    locationService.refreshLocation()
+                    await refreshHome()
                 }
                 .onChange(of: settingsStore.useCurrentLocation) { _, _ in
                     reloadHome()
@@ -67,9 +66,26 @@ struct HomeView: View {
     }
 
     private func load() async {
+        let currentLocation: CLLocation?
+        currentLocation = settingsStore.useCurrentLocation ? locationService.currentLocation : nil
+
         await viewModel.load(
             settings: settingsStore,
-            currentLocation: locationService.currentLocation
+            currentLocation: currentLocation
+        )
+    }
+
+    private func refreshHome() async {
+        let refreshedLocation: CLLocation?
+        if settingsStore.useCurrentLocation {
+            refreshedLocation = await locationService.refreshLocationAndWait()
+        } else {
+            refreshedLocation = nil
+        }
+
+        await viewModel.load(
+            settings: settingsStore,
+            currentLocation: refreshedLocation
         )
     }
 
@@ -94,7 +110,7 @@ struct HomeView: View {
         }
         .scrollIndicators(.hidden)
         .refreshable {
-            await load()
+            await refreshHome()
         }
         .appScreenBackground()
     }
