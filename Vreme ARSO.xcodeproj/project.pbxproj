@@ -454,7 +454,7 @@
 				DEVELOPMENT_TEAM = AX2Z5LF5SG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Vreme;
+				INFOPLIST_KEY_CFBundleDisplayName = Vremenko;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.weather";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Lokacija se uporabi za izbor najbližje ARSO postaje.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -490,7 +490,7 @@
 				DEVELOPMENT_TEAM = AX2Z5LF5SG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Vreme;
+				INFOPLIST_KEY_CFBundleDisplayName = Vremenko;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.weather";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Lokacija se uporabi za izbor najbližje ARSO postaje.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
