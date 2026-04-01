@@ -80,6 +80,10 @@ struct StationsMapView: View {
                             MetricRow(label: "Tlak", value: NumberFormatterSI.string(from: station.observation?.pressure, suffix: "hPa"))
                         }
                         Section {
+                            Button(station.station.isFavorite ? "Odstrani iz priljubljenih" : "Dodaj med priljubljene") {
+                                settingsStore.toggleFavorite(stationID: station.station.id)
+                            }
+
                             Button("Nastavi kot privzeto postajo") {
                                 settingsStore.setSelectedStation(station.station)
                             }
@@ -95,6 +99,14 @@ struct StationsMapView: View {
                 await viewModel.load(favorites: settingsStore.favoriteStationIDs)
                 locationService.requestAccessIfNeeded()
                 locationService.refreshLocation()
+            }
+            .onChange(of: settingsStore.favoriteStationIDs) { _, favorites in
+                Task {
+                    await viewModel.load(favorites: favorites)
+
+                    guard let selectedStation else { return }
+                    self.selectedStation = viewModel.station(withID: selectedStation.id) ?? selectedStation
+                }
             }
         }
     }
@@ -158,6 +170,10 @@ final class StationsMapViewModel: ObservableObject {
         } catch {
             NSLog("Zemljevida ni bilo mogoče naložiti: %@", error.localizedDescription)
         }
+    }
+
+    func station(withID id: String) -> MapStation? {
+        stations.first(where: { $0.id == id })
     }
 
     func nearestStation(to location: CLLocation?) -> MapStation? {
