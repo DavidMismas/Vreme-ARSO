@@ -9,6 +9,10 @@ struct SettingsView: View {
     @State private var isResolvingPlace = false
     @State private var locationMessage: String?
 
+    private var favoriteStations: [WeatherStation] {
+        stations.filter { settingsStore.favoriteStationIDs.contains($0.id) }
+    }
+
     var body: some View {
         List {
             Section("Lokacija") {
@@ -42,32 +46,7 @@ struct SettingsView: View {
                             }
                         }
 
-                        Picker("Fallback postaja", selection: Binding(
-                            get: { settingsStore.selectedStationID ?? "" },
-                            set: { value in
-                                let station = stations.first(where: { $0.id == value })
-                                settingsStore.setSelectedStation(station)
-                            }
-                        )) {
-                            Text("Ni izbrane").tag("")
-                            ForEach(stations) { station in
-                                Text(station.name).tag(station.id)
-                            }
-                        }
-
                         Text("Če za izbrani kraj ni natančnejšega koordinatnega vira, aplikacija uporabi najbližjo ARSO postajo.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        Toggle(
-                            "Prikaži izbrano priljubljeno postajo na Domov in widgetu",
-                            isOn: $settingsStore.useSelectedFavoriteStationForPrimaryViews
-                        )
-                        .disabled(!settingsStore.hasSelectedFavoriteStation)
-
-                        Text(settingsStore.hasSelectedFavoriteStation
-                             ? "Če je vključeno, Domov in widget uporabita izbrano priljubljeno postajo namesto trenutne lokacije ali ročnega kraja."
-                             : "Najprej izberi postajo in jo označi kot priljubljeno, potem jo lahko pripneš na Domov in widget.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -99,8 +78,36 @@ struct SettingsView: View {
                 if settingsStore.favoriteStationIDs.isEmpty {
                     Text("Še ni priljubljenih postaj.")
                         .foregroundStyle(.secondary)
+                    Text("Dodaj jih iz zemljevida ali iz seznama razmer.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 } else {
-                    ForEach(stations.filter { settingsStore.favoriteStationIDs.contains($0.id) }) { station in
+                    Picker("Privzeta postaja", selection: Binding(
+                        get: { settingsStore.selectedStationID ?? "" },
+                        set: { value in
+                            let station = favoriteStations.first(where: { $0.id == value })
+                            settingsStore.setSelectedStation(station)
+                        }
+                    )) {
+                        Text("Ni izbrane").tag("")
+                        ForEach(favoriteStations) { station in
+                            Text(station.name).tag(station.id)
+                        }
+                    }
+
+                    Toggle(
+                        "Prikaži privzeto postajo na Domov in widgetu",
+                        isOn: $settingsStore.useSelectedFavoriteStationForPrimaryViews
+                    )
+                    .disabled(!settingsStore.hasSelectedFavoriteStation)
+
+                    Text(settingsStore.hasSelectedFavoriteStation
+                         ? "Če je vključeno, Domov in widget uporabita izbrano priljubljeno postajo namesto trenutne lokacije ali ročnega kraja."
+                         : "Izberi eno od priljubljenih postaj kot privzeto, če jo želiš prikazati na Domov in widgetu.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    ForEach(favoriteStations) { station in
                         Text(station.name)
                     }
                 }

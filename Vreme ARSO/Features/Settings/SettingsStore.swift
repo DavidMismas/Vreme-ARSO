@@ -89,6 +89,9 @@ final class SettingsStore: ObservableObject {
     func toggleFavorite(stationID: String) {
         if favoriteStationIDs.contains(stationID) {
             favoriteStationIDs.remove(stationID)
+            if selectedStationID == stationID {
+                setSelectedStation(nil)
+            }
         } else {
             favoriteStationIDs.insert(stationID)
         }

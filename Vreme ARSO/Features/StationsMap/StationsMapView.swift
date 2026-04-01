@@ -83,10 +83,6 @@ struct StationsMapView: View {
                             Button(station.station.isFavorite ? "Odstrani iz priljubljenih" : "Dodaj med priljubljene") {
                                 settingsStore.toggleFavorite(stationID: station.station.id)
                             }
-
-                            Button("Nastavi kot privzeto postajo") {
-                                settingsStore.setSelectedStation(station.station)
-                            }
                         }
                     }
                     .navigationTitle(station.station.name)
