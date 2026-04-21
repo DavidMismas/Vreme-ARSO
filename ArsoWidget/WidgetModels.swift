@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-enum WidgetWeatherCondition {
+enum WidgetWeatherCondition: String, Codable {
     case clear
     case partlyCloudy
     case cloudy
@@ -14,7 +14,7 @@ enum WidgetWeatherCondition {
     case unknown
 }
 
-struct WidgetForecastDay: Identifiable {
+struct WidgetForecastDay: Identifiable, Codable {
     let id: String
     let weekday: String
     let maxTemperatureText: String
@@ -22,7 +22,7 @@ struct WidgetForecastDay: Identifiable {
     let condition: WidgetWeatherCondition
 }
 
-struct WidgetWarningSummary {
+struct WidgetWarningSummary: Codable {
     let title: String
     let area: String
     let severity: String
@@ -43,7 +43,7 @@ struct WidgetWarningSummary {
     }
 }
 
-struct WidgetWeatherContent {
+struct WidgetWeatherContent: Codable {
     let locationName: String
     let isFallbackLocation: Bool
     let currentTemperatureText: String
@@ -55,11 +55,26 @@ struct WidgetWeatherContent {
     let forecastSnippet: String?
     let detailText: String
 
+    func markedAsFallback() -> WidgetWeatherContent {
+        WidgetWeatherContent(
+            locationName: locationName,
+            isFallbackLocation: true,
+            currentTemperatureText: currentTemperatureText,
+            currentSummary: currentSummary,
+            currentCondition: currentCondition,
+            dailyForecast: dailyForecast,
+            primaryWarning: primaryWarning,
+            forecastSnippetTitle: forecastSnippetTitle,
+            forecastSnippet: forecastSnippet,
+            detailText: detailText
+        )
+    }
+
     static let placeholder = WidgetWeatherContent(
-        locationName: "Ljubljana",
+        locationName: "Vreme ARSO",
         isFallbackLocation: true,
-        currentTemperatureText: "8 °C",
-        currentSummary: "Delno oblačno",
+        currentTemperatureText: "Ni podatka",
+        currentSummary: "Zadnji podatki niso na voljo",
         currentCondition: .partlyCloudy,
         dailyForecast: [
             WidgetForecastDay(id: "1", weekday: "Pet", maxTemperatureText: "12°", minTemperatureText: "2°", condition: .partlyCloudy),
@@ -71,6 +86,6 @@ struct WidgetWeatherContent {
         primaryWarning: WidgetWarningSummary(title: "Rumeno opozorilo", area: "Osrednja Slovenija", severity: "moderate"),
         forecastSnippetTitle: "Napoved",
         forecastSnippet: "Danes bo delno do zmerno oblačno, veter bo večinoma šibak.",
-        detailText: "Veter šibek do zmeren. Vir podatkov: ARSO."
+        detailText: "Vir podatkov: ARSO."
     )
 }

@@ -11,6 +11,7 @@ enum WidgetSharedStore {
 
     static func syncPreferences(
         useCurrentLocation: Bool,
+        autoRefreshEnabled: Bool,
         manualLocationName: String?,
         manualLatitude: Double?,
         manualLongitude: Double?,
@@ -22,6 +23,7 @@ enum WidgetSharedStore {
         guard let sharedDefaults else { return }
 
         sharedDefaults.set(useCurrentLocation, forKey: Keys.useCurrentLocation)
+        sharedDefaults.set(autoRefreshEnabled, forKey: Keys.autoRefreshEnabled)
         sharedDefaults.set(manualLocationName, forKey: Keys.manualLocationName)
         sharedDefaults.set(manualLatitude, forKey: Keys.manualLocationLatitude)
         sharedDefaults.set(manualLongitude, forKey: Keys.manualLocationLongitude)
@@ -33,16 +35,22 @@ enum WidgetSharedStore {
     }
 
     static func syncCurrentLocation(_ location: CLLocation?) {
-        guard let sharedDefaults else { return }
+        guard
+            let sharedDefaults,
+            let location
+        else {
+            return
+        }
 
-        sharedDefaults.set(location?.coordinate.latitude, forKey: Keys.currentLocationLatitude)
-        sharedDefaults.set(location?.coordinate.longitude, forKey: Keys.currentLocationLongitude)
+        sharedDefaults.set(location.coordinate.latitude, forKey: Keys.currentLocationLatitude)
+        sharedDefaults.set(location.coordinate.longitude, forKey: Keys.currentLocationLongitude)
         WidgetCenter.shared.reloadAllTimelines()
     }
 }
 
 private enum Keys {
     static let useCurrentLocation = "useCurrentLocation"
+    static let autoRefreshEnabled = "autoRefreshEnabled"
     static let manualLocationName = "manualLocationName"
     static let manualLocationLatitude = "manualLocationLatitude"
     static let manualLocationLongitude = "manualLocationLongitude"

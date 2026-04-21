@@ -87,18 +87,7 @@ final class LocationResolver {
             )
         }
 
-        guard let fallbackStation = stations.first(where: { $0.id == "LJUBL-ANA_BEZIGRAD_" }) ?? stations.first else {
-            return nil
-        }
-
-        return ResolvedForecastLocation(
-            displayName: fallbackStation.name,
-            detailText: "Prikaz po referenčni postaji",
-            source: .station,
-            coordinate: fallbackStation.coordinate,
-            nearestStation: fallbackStation,
-            observation: observationsByStation[fallbackStation.id]
-        )
+        return nil
     }
 
     func geocode(place query: String) async throws -> ManualLocationResult {

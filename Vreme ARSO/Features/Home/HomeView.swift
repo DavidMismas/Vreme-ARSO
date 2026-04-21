@@ -23,27 +23,24 @@ struct HomeView: View {
                 .animation(.easeInOut(duration: 0.22), value: viewModel.state?.location.displayName)
                 .task {
                     locationService.requestAccessIfNeeded()
-                    await refreshHome()
+                    _ = viewModel.restorePersistedStateIfAvailable()
+
+                    if settingsStore.autoRefreshEnabled || viewModel.state == nil {
+                        await refreshHome(forceLocationRefresh: true)
+                    }
                 }
-                .onChange(of: settingsStore.useCurrentLocation) { _, _ in
-                    reloadHome()
-                }
-                .onChange(of: settingsStore.selectedStationID) { _, _ in
-                    reloadHome()
-                }
-                .onChange(of: settingsStore.useSelectedFavoriteStationForPrimaryViews) { _, _ in
-                    reloadHome()
-                }
-                .onChange(of: settingsStore.manualLocationName) { _, _ in
-                    reloadHome()
-                }
-                .onChange(of: settingsStore.manualLocationLatitude) { _, _ in
+                .onChange(of: settingsStore.homeLocationPreferenceKey) { _, _ in
                     reloadHome()
                 }
                 .onChange(of: settingsStore.favoriteStationIDs) { _, _ in
                     reloadHome()
                 }
-                .onChange(of: locationService.currentLocation) { _, _ in
+                .onChange(of: settingsStore.autoRefreshEnabled) { _, isEnabled in
+                    guard isEnabled else { return }
+                    reloadHome()
+                }
+                .onChange(of: currentLocationSignature) { _, _ in
+                    guard settingsStore.useCurrentLocation, settingsStore.autoRefreshEnabled else { return }
                     reloadHome()
                 }
                 .appScreenBackground()
@@ -75,12 +72,12 @@ struct HomeView: View {
         )
     }
 
-    private func refreshHome() async {
+    private func refreshHome(forceLocationRefresh: Bool) async {
         let refreshedLocation: CLLocation?
-        if settingsStore.useCurrentLocation {
+        if settingsStore.useCurrentLocation, forceLocationRefresh {
             refreshedLocation = await locationService.refreshLocationAndWait()
         } else {
-            refreshedLocation = nil
+            refreshedLocation = settingsStore.useCurrentLocation ? locationService.currentLocation : nil
         }
 
         await viewModel.load(
@@ -91,6 +88,11 @@ struct HomeView: View {
 
     private func reloadHome() {
         Task { await load() }
+    }
+
+    private var currentLocationSignature: String {
+        guard let coordinate = locationService.currentLocation?.coordinate else { return "" }
+        return "\(coordinate.latitude),\(coordinate.longitude)"
     }
 
     private func stateContent(_ state: HomeViewModel.State) -> some View {
@@ -110,7 +112,7 @@ struct HomeView: View {
         }
         .scrollIndicators(.hidden)
         .refreshable {
-            await refreshHome()
+            await refreshHome(forceLocationRefresh: true)
         }
         .appScreenBackground()
     }
@@ -149,6 +151,18 @@ struct HomeView: View {
                     }
 
                     SourceBadge()
+                }
+
+                if let staleNotice = state.staleNotice {
+                    Label(staleNotice, systemImage: "clock.badge.exclamationmark")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.orange)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color.orange.opacity(0.12))
+                        )
                 }
 
                 NavigationLink {
@@ -417,6 +431,16 @@ final class HomeViewModel: ObservableObject {
         let primaryWarning: WarningItem?
         let radarPreview: RadarFrame?
         let satellitePreview: SatelliteFrame?
+        let fetchedAt: Date
+
+        var freshnessReferenceDate: Date {
+            observation.timestamp ?? fetchedAt
+        }
+
+        var staleNotice: String? {
+            guard Date().timeIntervalSince(freshnessReferenceDate) > 6 * 60 * 60 else { return nil }
+            return "Podatki so starejši od 6 ur. Zadnja posodobitev: \(DateFormatterSI.displayDateTime.string(from: freshnessReferenceDate))"
+        }
     }
 
     @Published private(set) var state: State?
@@ -427,6 +451,17 @@ final class HomeViewModel: ObservableObject {
 
     init(container: AppContainer) {
         self.container = container
+    }
+
+    @discardableResult
+    func restorePersistedStateIfAvailable() -> Bool {
+        guard let persistedState = HomeStateStore.load() else { return false }
+
+        withAnimation(.easeInOut(duration: 0.22)) {
+            state = persistedState
+        }
+        errorMessage = nil
+        return true
     }
 
     func load(settings: SettingsStore, currentLocation: CLLocation?) async {
@@ -497,18 +532,25 @@ final class HomeViewModel: ObservableObject {
                 summaryForecast: forecastSections.first(where: { $0.type == .napoved }),
                 primaryWarning: warnings.sorted(by: { $0.severity > $1.severity }).first,
                 radarPreview: radarFrames.last ?? radarFrames.first,
-                satellitePreview: satelliteFrame
+                satellitePreview: satelliteFrame,
+                fetchedAt: Date()
             )
 
             withAnimation(.easeInOut(duration: 0.22)) {
                 state = nextState
             }
             errorMessage = nil
+            HomeStateStore.save(nextState)
             Task {
                 await container.imageCacheService.preload(urls: previewURLs)
             }
         } catch {
-            errorMessage = error.localizedDescription
+            if state == nil {
+                let restored = restorePersistedStateIfAvailable()
+                errorMessage = restored ? nil : error.localizedDescription
+            } else {
+                errorMessage = nil
+            }
         }
     }
 
@@ -536,6 +578,272 @@ final class HomeViewModel: ObservableObject {
             weatherDescription: primary?.weatherDescription ?? fallback?.weatherDescription,
             visibilityKilometers: primary?.visibilityKilometers ?? fallback?.visibilityKilometers,
             source: primary?.source ?? fallback?.source ?? "ARSO"
+        )
+    }
+}
+
+private enum HomeStateStore {
+    private static let defaults = UserDefaults.standard
+    private static let key = "cachedHomeState"
+
+    static func load() -> HomeViewModel.State? {
+        guard
+            let data = defaults.data(forKey: key),
+            let cachedState = try? JSONDecoder().decode(CachedHomeState.self, from: data)
+        else {
+            return nil
+        }
+
+        return cachedState.state
+    }
+
+    static func save(_ state: HomeViewModel.State) {
+        guard let data = try? JSONEncoder().encode(CachedHomeState(state: state)) else { return }
+        defaults.set(data, forKey: key)
+    }
+}
+
+private struct CachedHomeState: Codable {
+    let location: CachedResolvedForecastLocation
+    let observation: CachedCurrentObservation
+    let condition: String
+    let summaryForecast: CachedForecastTextSection?
+    let primaryWarning: CachedWarningItem?
+    let radarPreview: CachedRadarFrame?
+    let satellitePreview: CachedSatelliteFrame?
+    let fetchedAt: Date
+
+    init(state: HomeViewModel.State) {
+        location = CachedResolvedForecastLocation(location: state.location)
+        observation = CachedCurrentObservation(observation: state.observation)
+        condition = state.condition.rawValue
+        summaryForecast = state.summaryForecast.map(CachedForecastTextSection.init)
+        primaryWarning = state.primaryWarning.map(CachedWarningItem.init)
+        radarPreview = state.radarPreview.map(CachedRadarFrame.init)
+        satellitePreview = state.satellitePreview.map(CachedSatelliteFrame.init)
+        fetchedAt = state.fetchedAt
+    }
+
+    var state: HomeViewModel.State {
+        let restoredObservation = observation.observation
+
+        return HomeViewModel.State(
+            location: location.location(observation: restoredObservation),
+            observation: restoredObservation,
+            condition: WeatherCondition(rawValue: condition) ?? .unknown,
+            summaryForecast: summaryForecast?.section,
+            primaryWarning: primaryWarning?.warning,
+            radarPreview: radarPreview?.frame,
+            satellitePreview: satellitePreview?.frame,
+            fetchedAt: fetchedAt
+        )
+    }
+}
+
+private struct CachedResolvedForecastLocation: Codable {
+    let displayName: String
+    let detailText: String?
+    let source: String
+    let latitude: Double?
+    let longitude: Double?
+    let nearestStation: WeatherStation?
+
+    init(location: ResolvedForecastLocation) {
+        displayName = location.displayName
+        detailText = location.detailText
+        source = location.source.rawValue
+        latitude = location.coordinate?.latitude
+        longitude = location.coordinate?.longitude
+        nearestStation = location.nearestStation
+    }
+
+    func location(observation: CurrentObservation) -> ResolvedForecastLocation {
+        ResolvedForecastLocation(
+            displayName: displayName,
+            detailText: detailText,
+            source: ForecastLocationSource(rawValue: source) ?? .manualPlace,
+            coordinate: coordinate,
+            nearestStation: nearestStation,
+            observation: observation
+        )
+    }
+
+    private var coordinate: CLLocationCoordinate2D? {
+        guard let latitude, let longitude else { return nil }
+        return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+}
+
+private struct CachedCurrentObservation: Codable {
+    let stationID: String
+    let timestamp: Date?
+    let temperature: Double?
+    let apparentTemperature: Double?
+    let humidity: Int?
+    let pressure: Double?
+    let windSpeed: Double?
+    let windGust: Double?
+    let windDirection: String?
+    let windDirectionDegrees: Double?
+    let precipitation: Double?
+    let cloudiness: String?
+    let weatherSymbol: String?
+    let weatherDescription: String?
+    let visibilityKilometers: Double?
+    let source: String
+
+    init(observation: CurrentObservation) {
+        stationID = observation.stationID
+        timestamp = observation.timestamp
+        temperature = observation.temperature
+        apparentTemperature = observation.apparentTemperature
+        humidity = observation.humidity
+        pressure = observation.pressure
+        windSpeed = observation.windSpeed
+        windGust = observation.windGust
+        windDirection = observation.windDirection
+        windDirectionDegrees = observation.windDirectionDegrees
+        precipitation = observation.precipitation
+        cloudiness = observation.cloudiness
+        weatherSymbol = observation.weatherSymbol
+        weatherDescription = observation.weatherDescription
+        visibilityKilometers = observation.visibilityKilometers
+        source = observation.source
+    }
+
+    var observation: CurrentObservation {
+        CurrentObservation(
+            stationID: stationID,
+            timestamp: timestamp,
+            temperature: temperature,
+            apparentTemperature: apparentTemperature,
+            humidity: humidity,
+            pressure: pressure,
+            windSpeed: windSpeed,
+            windGust: windGust,
+            windDirection: windDirection,
+            windDirectionDegrees: windDirectionDegrees,
+            precipitation: precipitation,
+            cloudiness: cloudiness,
+            weatherSymbol: weatherSymbol,
+            weatherDescription: weatherDescription,
+            visibilityKilometers: visibilityKilometers,
+            source: source
+        )
+    }
+}
+
+private struct CachedForecastTextSection: Codable {
+    let id: String
+    let type: String
+    let title: String
+    let body: String
+    let issuedAt: Date?
+    let sourceURL: String
+
+    init(section: ForecastTextSection) {
+        id = section.id
+        type = section.type.rawValue
+        title = section.title
+        body = section.body
+        issuedAt = section.issuedAt
+        sourceURL = section.sourceURL.absoluteString
+    }
+
+    var section: ForecastTextSection {
+        ForecastTextSection(
+            id: id,
+            type: ForecastTextSectionType(rawValue: type) ?? .napoved,
+            title: title,
+            body: body,
+            issuedAt: issuedAt,
+            sourceURL: URL(string: sourceURL) ?? Endpoint.forecastTextOverview.url
+        )
+    }
+}
+
+private struct CachedWarningItem: Codable {
+    let id: String
+    let title: String
+    let severity: String
+    let area: String
+    let validFrom: Date?
+    let validTo: Date?
+    let body: String
+    let eventType: String
+
+    init(warning: WarningItem) {
+        id = warning.id
+        title = warning.title
+        severity = warning.severity.rawValue
+        area = warning.area
+        validFrom = warning.validFrom
+        validTo = warning.validTo
+        body = warning.body
+        eventType = warning.eventType
+    }
+
+    var warning: WarningItem {
+        WarningItem(
+            id: id,
+            title: title,
+            severity: WarningSeverity(rawValue: severity) ?? .unknown,
+            area: area,
+            validFrom: validFrom,
+            validTo: validTo,
+            body: body,
+            eventType: eventType,
+            polygons: []
+        )
+    }
+}
+
+private struct CachedRadarFrame: Codable {
+    let id: String
+    let timestamp: Date?
+    let imageURL: String
+
+    init(frame: RadarFrame) {
+        id = frame.id
+        timestamp = frame.timestamp
+        imageURL = frame.imageURL.absoluteString
+    }
+
+    var frame: RadarFrame? {
+        guard let url = URL(string: imageURL) else { return nil }
+
+        return RadarFrame(
+            id: id,
+            timestamp: timestamp,
+            imageURL: url,
+            cachedLocalPath: nil,
+            geoReference: nil
+        )
+    }
+}
+
+private struct CachedSatelliteFrame: Codable {
+    let id: String
+    let timestamp: Date?
+    let imageURL: String
+    let animationURL: String?
+
+    init(frame: SatelliteFrame) {
+        id = frame.id
+        timestamp = frame.timestamp
+        imageURL = frame.imageURL.absoluteString
+        animationURL = frame.animationURL?.absoluteString
+    }
+
+    var frame: SatelliteFrame? {
+        guard let url = URL(string: imageURL) else { return nil }
+
+        return SatelliteFrame(
+            id: id,
+            timestamp: timestamp,
+            imageURL: url,
+            animationURL: animationURL.flatMap(URL.init(string:)),
+            cachedLocalPath: nil
         )
     }
 }

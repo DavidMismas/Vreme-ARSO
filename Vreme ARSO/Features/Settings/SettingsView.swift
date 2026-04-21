@@ -118,6 +118,9 @@ struct SettingsView: View {
                 Text("Aplikacija uporablja javno dostopne vremenske podatke ARSO.")
                 Text("Prikazi in vsebina so prilagojeni za prijaznejšo uporabo na telefonu.")
                     .foregroundStyle(.secondary)
+                Text("Aplikacija uporablja podatke ARSO - Agencija Republike Slovenije za okolje.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .navigationTitle("Nastavitve")

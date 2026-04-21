@@ -6,14 +6,20 @@ struct WidgetWeatherLoader {
     private let contentCache = WidgetContentCache.shared
 
     func loadContent() async -> WidgetWeatherContent {
+        let preference = readPreferredLocation()
+        let preferenceKey = cacheKey(for: preference)
+
+        if let cachedContent = await contentCache.content(for: preferenceKey, maxAge: 10 * 60) {
+            return cachedContent
+        }
+
+        if !preference.autoRefreshEnabled,
+           let persistedContent = persistedContent(for: preferenceKey) {
+            await contentCache.store(persistedContent, for: preferenceKey)
+            return persistedContent
+        }
+
         do {
-            let preference = readPreferredLocation()
-            let preferenceKey = cacheKey(for: preference)
-
-            if let cachedContent = await contentCache.content(for: preferenceKey, maxAge: 10 * 60) {
-                return cachedContent
-            }
-
             let resolved = try await resolveLocation(preference: preference)
             let forecastPayload = try await fetchJSON(from: resolved.forecastURL)
             let nonlocationPayload = try? await fetchJSON(from: URL(string: "https://vreme.arso.gov.si/api/1.0/nonlocation/?lang=sl")!)
@@ -24,8 +30,16 @@ struct WidgetWeatherLoader {
                 fallbackLocation: resolved.isFallback
             )
             await contentCache.store(content, for: preferenceKey)
+            WidgetSharedStore.storeCachedContent(content, for: preferenceKey)
             return content
         } catch {
+            let fallback = persistedContent(for: preferenceKey) ?? WidgetSharedStore.lastCachedContent()?.markedAsFallback()
+
+            if let fallback {
+                await contentCache.store(fallback, for: preferenceKey)
+                return fallback
+            }
+
             return .placeholder
         }
     }
@@ -34,6 +48,7 @@ struct WidgetWeatherLoader {
         let defaults = WidgetSharedStore.defaults
 
         let useCurrentLocation = defaults?.object(forKey: WidgetSharedStore.Keys.useCurrentLocation) as? Bool ?? true
+        let autoRefreshEnabled = defaults?.object(forKey: WidgetSharedStore.Keys.autoRefreshEnabled) as? Bool ?? true
         let manualLocationName = defaults?.string(forKey: WidgetSharedStore.Keys.manualLocationName)
         let manualLatitude = defaults?.object(forKey: WidgetSharedStore.Keys.manualLocationLatitude) as? Double
         let manualLongitude = defaults?.object(forKey: WidgetSharedStore.Keys.manualLocationLongitude) as? Double
@@ -45,6 +60,7 @@ struct WidgetWeatherLoader {
         let selectedStationLongitude = defaults?.object(forKey: WidgetSharedStore.Keys.selectedStationLongitude) as? Double
 
         return WidgetLocationPreference(
+            autoRefreshEnabled: autoRefreshEnabled,
             useSelectedFavoriteStation: useSelectedFavoriteStation,
             selectedStationName: selectedStationName,
             selectedStationCoordinate: coordinate(latitude: selectedStationLatitude, longitude: selectedStationLongitude),
@@ -101,11 +117,7 @@ struct WidgetWeatherLoader {
             )
         }
 
-        return WidgetResolvedLocation(
-            forecastURL: locationURL(named: "Ljubljana"),
-            displayName: "Ljubljana",
-            isFallback: true
-        )
+        throw WidgetLoaderError.noLocationPreference
     }
 
     private func fetchNearestLocationName(for coordinate: CLLocationCoordinate2D) async throws -> String {
@@ -170,6 +182,10 @@ struct WidgetWeatherLoader {
         return "\(coordinate.latitude),\(coordinate.longitude)"
     }
 
+    private func persistedContent(for preferenceKey: String) -> WidgetWeatherContent? {
+        WidgetSharedStore.cachedContent(for: preferenceKey)?.markedAsFallback()
+    }
+
     private func parseContent(
         forecastPayload: [String: Any],
         nonlocationPayload: [String: Any]?,
@@ -195,7 +211,7 @@ struct WidgetWeatherLoader {
 
         let locationName = preferredDisplayName?.nilIfBlank
             ?? (forecastProperties["title"] as? String)?.nilIfBlank
-            ?? "Ljubljana"
+            ?? "Izbrana lokacija"
         let currentTemperature = stringValue(current["t"]) ?? "Ni podatka"
         let currentSummary = firstNonEmpty(
             stringValue(current["clouds_shortText_wwsyn_shortText"]),
@@ -380,6 +396,7 @@ struct WidgetWeatherLoader {
 }
 
 private struct WidgetLocationPreference {
+    let autoRefreshEnabled: Bool
     let useSelectedFavoriteStation: Bool
     let selectedStationName: String?
     let selectedStationCoordinate: CLLocationCoordinate2D?
@@ -398,6 +415,7 @@ private struct WidgetResolvedLocation {
 private enum WidgetLoaderError: Error {
     case invalidResponse
     case invalidPayload
+    case noLocationPreference
 }
 
 private enum WidgetDateFormatters {

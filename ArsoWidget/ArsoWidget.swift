@@ -105,7 +105,7 @@ private struct SmallCurrentWidgetView: View {
                         .multilineTextAlignment(.leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    Text(content.isFallbackLocation ? "Privzeta lokacija" : "Trenutna lokacija")
+                    Text(content.isFallbackLocation ? "Zadnji podatki" : "Izbrana lokacija")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -320,20 +320,21 @@ private extension View {
     }
 }
 
-#Preview("Small", as: .systemSmall) {
-    ArsoCurrentWidget()
-} timeline: {
-    ArsoWidgetEntry(date: .now, content: .placeholder)
+struct ArsoWidgetPreviews: PreviewProvider {
+    static var previews: some View {
+        Group {
+            ArsoWidgetEntryView(entry: .placeholder)
+                .previewContext(WidgetPreviewContext(family: .systemSmall))
+
+            ArsoWidgetEntryView(entry: .placeholder)
+                .previewContext(WidgetPreviewContext(family: .systemMedium))
+
+            ArsoWidgetEntryView(entry: .placeholder)
+                .previewContext(WidgetPreviewContext(family: .systemLarge))
+        }
+    }
 }
 
-#Preview("Medium", as: .systemMedium) {
-    ArsoForecastMediumWidget()
-} timeline: {
-    ArsoWidgetEntry(date: .now, content: .placeholder)
-}
-
-#Preview("Large", as: .systemLarge) {
-    ArsoForecastLargeWidget()
-} timeline: {
-    ArsoWidgetEntry(date: .now, content: .placeholder)
+private extension ArsoWidgetEntry {
+    static let placeholder = ArsoWidgetEntry(date: .now, content: .placeholder)
 }

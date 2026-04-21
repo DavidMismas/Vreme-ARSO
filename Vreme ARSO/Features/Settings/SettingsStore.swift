@@ -10,57 +10,77 @@ final class SettingsStore: ObservableObject {
             if selectedStationID == nil {
                 clearSelectedStationMetadata()
             }
-            syncWidgetPreferences()
+            if !isBatchUpdatingPreferences {
+                syncWidgetPreferences()
+            }
         }
     }
 
     @Published var useSelectedFavoriteStationForPrimaryViews: Bool {
         didSet {
             defaults.set(useSelectedFavoriteStationForPrimaryViews, forKey: Keys.useSelectedFavoriteStationForPrimaryViews)
-            syncWidgetPreferences()
+            if !isBatchUpdatingPreferences {
+                syncWidgetPreferences()
+            }
         }
     }
 
     @Published var useCurrentLocation: Bool {
         didSet {
             defaults.set(useCurrentLocation, forKey: Keys.useCurrentLocation)
-            syncWidgetPreferences()
+            if !isBatchUpdatingPreferences {
+                syncWidgetPreferences()
+            }
         }
     }
 
     @Published var autoRefreshEnabled: Bool {
-        didSet { defaults.set(autoRefreshEnabled, forKey: Keys.autoRefreshEnabled) }
+        didSet {
+            defaults.set(autoRefreshEnabled, forKey: Keys.autoRefreshEnabled)
+            if !isBatchUpdatingPreferences {
+                syncWidgetPreferences()
+            }
+        }
     }
 
     @Published var manualLocationName: String? {
         didSet {
             defaults.set(manualLocationName, forKey: Keys.manualLocationName)
-            syncWidgetPreferences()
+            if !isBatchUpdatingPreferences {
+                syncWidgetPreferences()
+            }
         }
     }
 
     @Published var manualLocationLatitude: Double? {
         didSet {
             defaults.set(manualLocationLatitude, forKey: Keys.manualLocationLatitude)
-            syncWidgetPreferences()
+            if !isBatchUpdatingPreferences {
+                syncWidgetPreferences()
+            }
         }
     }
 
     @Published var manualLocationLongitude: Double? {
         didSet {
             defaults.set(manualLocationLongitude, forKey: Keys.manualLocationLongitude)
-            syncWidgetPreferences()
+            if !isBatchUpdatingPreferences {
+                syncWidgetPreferences()
+            }
         }
     }
 
     @Published private(set) var favoriteStationIDs: Set<String> {
         didSet {
             defaults.set(Array(favoriteStationIDs), forKey: Keys.favoriteStationIDs)
-            syncWidgetPreferences()
+            if !isBatchUpdatingPreferences {
+                syncWidgetPreferences()
+            }
         }
     }
 
     private let defaults = UserDefaults.standard
+    private var isBatchUpdatingPreferences = false
     private var selectedStationName: String? {
         didSet { defaults.set(selectedStationName, forKey: Keys.selectedStationName) }
     }
@@ -87,13 +107,15 @@ final class SettingsStore: ObservableObject {
     }
 
     func toggleFavorite(stationID: String) {
-        if favoriteStationIDs.contains(stationID) {
-            favoriteStationIDs.remove(stationID)
-            if selectedStationID == stationID {
-                setSelectedStation(nil)
+        performBatchUpdate {
+            if favoriteStationIDs.contains(stationID) {
+                favoriteStationIDs.remove(stationID)
+                if selectedStationID == stationID {
+                    setSelectedStation(nil)
+                }
+            } else {
+                favoriteStationIDs.insert(stationID)
             }
-        } else {
-            favoriteStationIDs.insert(stationID)
         }
     }
 
@@ -116,24 +138,46 @@ final class SettingsStore: ObservableObject {
         return CLLocationCoordinate2D(latitude: manualLocationLatitude, longitude: manualLocationLongitude)
     }
 
+    var homeLocationPreferenceKey: String {
+        let manualLatitude = manualLocationLatitude.map { String($0) } ?? ""
+        let manualLongitude = manualLocationLongitude.map { String($0) } ?? ""
+        let favoriteStations = favoriteStationIDs.sorted().joined(separator: ",")
+
+        return [
+            useCurrentLocation ? "current" : "manual",
+            useSelectedFavoriteStationForPrimaryViews ? "pinned" : "unpinned",
+            selectedStationID ?? "",
+            pinnedFavoriteStationID ?? "",
+            favoriteStations,
+            manualLocationName ?? "",
+            manualLatitude,
+            manualLongitude
+        ].joined(separator: "|")
+    }
+
     func saveManualLocation(name: String, latitude: Double, longitude: Double) {
-        manualLocationName = name
-        manualLocationLatitude = latitude
-        manualLocationLongitude = longitude
+        performBatchUpdate {
+            manualLocationName = name
+            manualLocationLatitude = latitude
+            manualLocationLongitude = longitude
+        }
     }
 
     func clearManualLocation() {
-        manualLocationName = nil
-        manualLocationLatitude = nil
-        manualLocationLongitude = nil
+        performBatchUpdate {
+            manualLocationName = nil
+            manualLocationLatitude = nil
+            manualLocationLongitude = nil
+        }
     }
 
     func setSelectedStation(_ station: WeatherStation?) {
-        selectedStationID = station?.id
-        selectedStationName = station?.name
-        selectedStationLatitude = station?.latitude
-        selectedStationLongitude = station?.longitude
-        syncWidgetPreferences()
+        performBatchUpdate {
+            selectedStationID = station?.id
+            selectedStationName = station?.name
+            selectedStationLatitude = station?.latitude
+            selectedStationLongitude = station?.longitude
+        }
     }
 
     func reconcileSelectedStation(with stations: [WeatherStation]) {
@@ -160,6 +204,7 @@ final class SettingsStore: ObservableObject {
 
         WidgetSharedStore.syncPreferences(
             useCurrentLocation: useCurrentLocation,
+            autoRefreshEnabled: autoRefreshEnabled,
             manualLocationName: manualLocationName,
             manualLatitude: manualLocationLatitude,
             manualLongitude: manualLocationLongitude,
@@ -174,6 +219,17 @@ final class SettingsStore: ObservableObject {
         selectedStationName = nil
         selectedStationLatitude = nil
         selectedStationLongitude = nil
+    }
+
+    private func performBatchUpdate(_ updates: () -> Void) {
+        let wasBatchUpdating = isBatchUpdatingPreferences
+        isBatchUpdatingPreferences = true
+        updates()
+        isBatchUpdatingPreferences = wasBatchUpdating
+
+        if !wasBatchUpdating {
+            syncWidgetPreferences()
+        }
     }
 }
 
