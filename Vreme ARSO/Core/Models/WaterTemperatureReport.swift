@@ -11,6 +11,7 @@ struct WaterTemperatureSlot: Identifiable, Hashable, Sendable {
 struct WaterTemperatureReport: Sendable {
     let issuedAtText: String?
     let statusMessage: String?
+    let waterMapURL: URL?
     let slots: [WaterTemperatureSlot]
     let sourceURL: URL
 }

@@ -137,32 +137,50 @@ private struct MediumForecastWidgetView: View {
     let maxDays: Int
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 7) {
             widgetHeader
             HStack(spacing: 8) {
                 ForEach(content.dailyForecast.prefix(maxDays)) { day in
-                    WidgetForecastColumn(day: day)
+                    WidgetForecastColumn(day: day, isCompact: true)
                 }
             }
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .padding(.top, 18)
+        .padding(.horizontal, 18)
+        .padding(.bottom, 16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
     
     private var widgetHeader: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .top, spacing: 8) {
                 Text(content.locationName)
                     .font(.headline)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+
+                Spacer(minLength: 8)
+
+                WeatherGlyph(condition: content.currentCondition, size: 22)
+            }
+
+            HStack(spacing: 7) {
                 Text("\(content.currentTemperatureText) • \(content.currentSummary)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-            }
+                    .minimumScaleFactor(0.82)
 
-            Spacer(minLength: 8)
-            WeatherGlyph(condition: content.currentCondition, size: 24)
+                if let seaTemperatureText = content.seaTemperatureText {
+                    Label(seaTemperatureText, systemImage: "water.waves")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(WidgetTheme.glassPill, in: Capsule())
+                }
+            }
         }
     }
 }
@@ -210,6 +228,12 @@ private struct LargeForecastWidgetView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                if let seaTemperatureText = content.seaTemperatureText {
+                    Label(seaTemperatureText, systemImage: "water.waves")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
 
             Spacer(minLength: 8)
@@ -235,7 +259,11 @@ private struct LargeForecastWidgetView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(warning.color.opacity(0.16))
+                .fill(warning.color.opacity(0.12))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(.white.opacity(0.30), lineWidth: 1)
+                }
         )
     }
 
@@ -258,15 +286,16 @@ private struct LargeForecastWidgetView: View {
 
 private struct WidgetForecastColumn: View {
     let day: WidgetForecastDay
+    var isCompact = false
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: isCompact ? 4 : 6) {
             Text(day.weekday)
-                .font(.caption2.weight(.semibold))
+                .font((isCompact ? Font.caption2 : .caption2).weight(.semibold))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
 
-            WeatherGlyph(condition: day.condition, size: 20)
+            WeatherGlyph(condition: day.condition, size: isCompact ? 17 : 20)
 
             Text(day.maxTemperatureText)
                 .font(.caption.weight(.semibold))
@@ -274,32 +303,57 @@ private struct WidgetForecastColumn: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, isCompact ? 6 : 8)
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: isCompact ? 14 : 16, style: .continuous)
                 .fill(WidgetTheme.tile)
+                .overlay {
+                    RoundedRectangle(cornerRadius: isCompact ? 14 : 16, style: .continuous)
+                        .stroke(WidgetTheme.tileBorder, lineWidth: 1)
+                }
         )
     }
 }
 
 private enum WidgetTheme {
-    static let skyBlue = Color(red: 54 / 255, green: 135 / 255, blue: 201 / 255)
-    static let mintGreen = Color(red: 163 / 255, green: 227 / 255, blue: 161 / 255)
-    static let border = skyBlue.opacity(0.22)
+    static let deepBlue = Color(red: 0.07, green: 0.28, blue: 0.48)
+    static let skyBlue = Color(red: 0.16, green: 0.52, blue: 0.82)
+    static let aqua = Color(red: 0.34, green: 0.82, blue: 0.88)
+    static let glassEdge = Color.white.opacity(0.34)
+    static let border = skyBlue.opacity(0.24)
+    static let tileBorder = Color.white.opacity(0.24)
+    static let glassPill = LinearGradient(
+        colors: [
+            Color.white.opacity(0.22),
+            aqua.opacity(0.18)
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
     static let tile = LinearGradient(
         colors: [
-            skyBlue.opacity(0.12),
-            mintGreen.opacity(0.16)
+            Color.white.opacity(0.20),
+            aqua.opacity(0.13),
+            deepBlue.opacity(0.10)
         ],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
     static let background = LinearGradient(
         colors: [
-            skyBlue.opacity(0.22),
-            mintGreen.opacity(0.28),
-            Color.white.opacity(0.96)
+            skyBlue.opacity(0.74),
+            aqua.opacity(0.48),
+            deepBlue.opacity(0.64)
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    static let glassHighlight = LinearGradient(
+        colors: [
+            Color.white.opacity(0.24),
+            Color.white.opacity(0.08),
+            Color.white.opacity(0.02)
         ],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
@@ -311,11 +365,26 @@ private extension View {
     func widgetContainerBackground() -> some View {
         if #available(iOS 17.0, *) {
             containerBackground(for: .widget) {
-                WidgetTheme.background
+                WidgetGlassBackground()
             }
         } else {
             padding(0)
-                .background(WidgetTheme.background)
+                .background(WidgetGlassBackground())
+        }
+    }
+}
+
+private struct WidgetGlassBackground: View {
+    var body: some View {
+        ZStack {
+            WidgetTheme.background
+
+            WidgetTheme.glassHighlight
+                .blendMode(.screen)
+
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(WidgetTheme.glassEdge, lineWidth: 1)
+                .padding(1)
         }
     }
 }

@@ -100,6 +100,9 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 16) {
                 heroSection(state)
                 metricsSection(state)
+                if let seaTemperature = state.seaTemperature {
+                    seaTemperatureSection(seaTemperature)
+                }
                 forecastSection(state)
 
                 if let warning = state.primaryWarning {
@@ -118,11 +121,11 @@ struct HomeView: View {
     }
 
     private func heroSection(_ state: HomeViewModel.State) -> some View {
-        HStack(alignment: .top, spacing: 18) {
-            VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(state.location.displayName)
-                        .font(.title2.weight(.semibold))
+                        .font(.title2.weight(.bold))
 
                     if let detailText = state.location.detailText {
                         Text(detailText)
@@ -131,19 +134,29 @@ struct HomeView: View {
                     }
                 }
 
+                Spacer(minLength: 10)
+
+                ZStack {
+                    Circle()
+                        .fill(AppTheme.Colors.accent.opacity(0.13))
+                    Circle()
+                        .stroke(AppTheme.Colors.accent.opacity(0.28), lineWidth: 1)
+                    WeatherSymbolView(condition: state.condition, size: 34)
+                }
+                .frame(width: 68, height: 68)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(NumberFormatterSI.string(from: state.observation.temperature, suffix: "°C"))
-                        .font(.system(size: 68, weight: .bold, design: .rounded))
+                        .font(.system(size: 64, weight: .bold, design: .rounded))
                         .contentTransition(.numericText())
-
-                    WeatherSymbolView(condition: state.condition, size: 34)
-                        .padding(.bottom, 8)
                 }
 
                 Text(state.observation.weatherDescription ?? "Brez opisa")
                     .font(.title3.weight(.medium))
 
-                HStack(spacing: 10) {
+                HStack(spacing: 8) {
                     if let timestamp = state.observation.timestamp {
                         Label(DateFormatterSI.displayDateTime.string(from: timestamp), systemImage: "clock")
                             .font(.caption)
@@ -168,7 +181,10 @@ struct HomeView: View {
                 NavigationLink {
                     LocationForecastView(container: container, location: state.location)
                 } label: {
-                    Label("Napoved po dnevih", systemImage: "calendar")
+                    HStack(spacing: 8) {
+                        Label("Napoved po dnevih", systemImage: "calendar")
+                        Image(systemName: "arrow.right")
+                    }
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(AppTheme.Colors.accent)
                         .padding(.horizontal, 14)
@@ -180,20 +196,10 @@ struct HomeView: View {
                 }
                 .buttonStyle(.plain)
             }
-
-            Spacer(minLength: 0)
         }
         .padding(24)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            AppTheme.Colors.cardGradient,
-            in: RoundedRectangle(cornerRadius: 28, style: .continuous)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(AppTheme.Colors.border.opacity(0.95), lineWidth: 1)
-        }
-        .shadow(color: AppTheme.Colors.accent.opacity(0.12), radius: 20, y: 9)
+        .appCardSurface(cornerRadius: 28)
     }
 
     private func metricsSection(_ state: HomeViewModel.State) -> some View {
@@ -201,24 +207,83 @@ struct HomeView: View {
             HeroMetricCard(
                 title: "Veter",
                 value: windText(state.observation),
-                systemImage: "wind"
+                systemImage: "wind",
+                tint: AppTheme.Colors.accent
             )
             HeroMetricCard(
                 title: "Padavine",
                 value: NumberFormatterSI.string(from: state.observation.precipitation, suffix: "mm"),
-                systemImage: "drop"
+                systemImage: "drop.fill",
+                tint: .cyan
             )
             HeroMetricCard(
                 title: "Vlaga",
                 value: state.observation.humidity.map { "\($0) %" } ?? "Ni podatka",
-                systemImage: "humidity"
+                systemImage: "humidity.fill",
+                tint: AppTheme.Colors.accentSecondary
             )
             HeroMetricCard(
                 title: "Tlak",
                 value: NumberFormatterSI.string(from: state.observation.pressure, suffix: "hPa"),
-                systemImage: "gauge.with.dots.needle.33percent"
+                systemImage: "gauge.with.dots.needle.33percent",
+                tint: .orange
             )
         }
+    }
+
+    private func seaTemperatureSection(_ seaTemperature: HomeSeaTemperature) -> some View {
+        NavigationLink {
+            WaterTemperaturesView(container: container)
+        } label: {
+            HStack(alignment: .center, spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(Color.cyan.opacity(0.14))
+                        .frame(width: 50, height: 50)
+
+                    Image(systemName: "water.waves")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.cyan)
+                }
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Temperatura morja")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+
+                    Text(seaTemperature.label)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 8) {
+                        if let seaState = seaTemperature.seaState {
+                            Label("Stanje \(seaState)", systemImage: "water.waves")
+                        }
+                        if let windSpeed = seaTemperature.windSpeed {
+                            Label(windSpeed, systemImage: "wind")
+                        }
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+                }
+
+                Spacer(minLength: 12)
+
+                Text(seaTemperature.temperature)
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .monospacedDigit()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(16)
+            .appCardSurface(cornerRadius: 22)
+        }
+        .buttonStyle(.plain)
     }
 
     private func forecastSection(_ state: HomeViewModel.State) -> some View {
@@ -313,12 +378,17 @@ private struct HeroMetricCard: View {
     let title: String
     let value: String
     let systemImage: String
+    let tint: Color
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label(title, systemImage: systemImage)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                Image(systemName: systemImage)
+                    .foregroundStyle(tint)
+                Text(title)
+                    .foregroundStyle(.secondary)
+            }
+            .font(.caption.weight(.semibold))
 
             Text(value)
                 .font(.headline)
@@ -328,10 +398,11 @@ private struct HeroMetricCard: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, minHeight: 86, alignment: .leading)
-        .background(
+        .background(tint.opacity(0.075), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(AppTheme.Colors.cardBackground)
-        )
+                .stroke(tint.opacity(0.18), lineWidth: 1)
+        }
     }
 }
 
@@ -371,10 +442,7 @@ private struct ImageryPreviewCard: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(AppTheme.Colors.cardBackground)
-        )
+        .appCardSurface(cornerRadius: 22)
     }
 
     @ViewBuilder
@@ -431,6 +499,7 @@ final class HomeViewModel: ObservableObject {
         let primaryWarning: WarningItem?
         let radarPreview: RadarFrame?
         let satellitePreview: SatelliteFrame?
+        let seaTemperature: HomeSeaTemperature?
         let fetchedAt: Date
 
         var freshnessReferenceDate: Date {
@@ -483,6 +552,7 @@ final class HomeViewModel: ObservableObject {
             async let warningsTask = container.warningsService.fetchWarnings()
             async let radarTask = container.radarService.fetchFrames()
             async let satelliteTask = container.satelliteService.fetchLatestFrame()
+            async let waterTask = container.waterTemperaturesService.fetchReport()
 
             let stations = try await stationsTask
             let observations = try await observationsTask
@@ -522,6 +592,7 @@ final class HomeViewModel: ObservableObject {
             let warnings = (try? await warningsTask) ?? []
             let radarFrames = (try? await radarTask) ?? []
             let satelliteFrame = try? await satelliteTask
+            let waterReport = try? await waterTask
             let previewURLs = [radarFrames.last?.imageURL, radarFrames.first?.imageURL, satelliteFrame?.imageURL]
                 .compactMap { $0 }
 
@@ -533,6 +604,7 @@ final class HomeViewModel: ObservableObject {
                 primaryWarning: warnings.sorted(by: { $0.severity > $1.severity }).first,
                 radarPreview: radarFrames.last ?? radarFrames.first,
                 satellitePreview: satelliteFrame,
+                seaTemperature: waterReport?.slots.first.map(HomeSeaTemperature.init),
                 fetchedAt: Date()
             )
 
@@ -582,6 +654,20 @@ final class HomeViewModel: ObservableObject {
     }
 }
 
+struct HomeSeaTemperature: Codable, Hashable {
+    let label: String
+    let temperature: String
+    let seaState: String?
+    let windSpeed: String?
+
+    init(slot: WaterTemperatureSlot) {
+        label = slot.label
+        temperature = slot.seaTemperature
+        seaState = slot.seaState
+        windSpeed = slot.windSpeed
+    }
+}
+
 private enum HomeStateStore {
     private static let defaults = UserDefaults.standard
     private static let key = "cachedHomeState"
@@ -611,6 +697,7 @@ private struct CachedHomeState: Codable {
     let primaryWarning: CachedWarningItem?
     let radarPreview: CachedRadarFrame?
     let satellitePreview: CachedSatelliteFrame?
+    let seaTemperature: HomeSeaTemperature?
     let fetchedAt: Date
 
     init(state: HomeViewModel.State) {
@@ -621,6 +708,7 @@ private struct CachedHomeState: Codable {
         primaryWarning = state.primaryWarning.map(CachedWarningItem.init)
         radarPreview = state.radarPreview.map(CachedRadarFrame.init)
         satellitePreview = state.satellitePreview.map(CachedSatelliteFrame.init)
+        seaTemperature = state.seaTemperature
         fetchedAt = state.fetchedAt
     }
 
@@ -635,6 +723,7 @@ private struct CachedHomeState: Codable {
             primaryWarning: primaryWarning?.warning,
             radarPreview: radarPreview?.frame,
             satellitePreview: satellitePreview?.frame,
+            seaTemperature: seaTemperature,
             fetchedAt: fetchedAt
         )
     }

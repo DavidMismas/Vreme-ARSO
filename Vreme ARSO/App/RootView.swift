@@ -96,6 +96,14 @@ private struct MoreView: View {
                     }
 
                     MoreLinkRow(
+                        title: "Čistost zraka",
+                        subtitle: "Meritve delcev in plinov po ARSO postajah",
+                        systemImage: "aqi.medium"
+                    ) {
+                        AirQualityView(container: container)
+                    }
+
+                    MoreLinkRow(
                         title: "Temperature voda",
                         subtitle: "Morje in druga kopalna območja",
                         systemImage: "water.waves"
@@ -196,20 +204,12 @@ private struct MoreLinkRow<Destination: View>: View {
 
                 Image(systemName: "chevron.right")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(AppTheme.Colors.screenBackground.opacity(0.88))
+                    .foregroundStyle(.tertiary)
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
-            .background(
-                AppTheme.Colors.cardGradient,
-                in: RoundedRectangle(cornerRadius: 22, style: .continuous)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(AppTheme.Colors.border.opacity(0.95), lineWidth: 1)
-            }
-            .shadow(color: AppTheme.Colors.accent.opacity(0.08), radius: 10, y: 4)
+            .appCardSurface(cornerRadius: 22)
         }
         .buttonStyle(.plain)
     }

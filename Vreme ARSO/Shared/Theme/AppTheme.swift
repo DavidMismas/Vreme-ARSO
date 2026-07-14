@@ -4,13 +4,13 @@ import UIKit
 enum AppTheme {
     enum Palette {
         static let skyBlue = UIColor(hex: "#8FD0F5")
-        static let mintGreen = UIColor(hex: "#9BD8A5")
-        static let canvas = UIColor(hex: "#152229")
-        static let canvasAlt = UIColor(hex: "#1B2A2F")
-        static let surface = UIColor(hex: "#233842")
-        static let surfaceMuted = UIColor(hex: "#35515B")
-        static let surfaceSoft = UIColor(hex: "#476055")
-        static let border = UIColor(hex: "#8FAAA8")
+        static let mintGreen = UIColor(hex: "#8DE0B2")
+        static let canvas = UIColor(hex: "#081820")
+        static let canvasAlt = UIColor(hex: "#102731")
+        static let surface = UIColor(hex: "#173541")
+        static let surfaceMuted = UIColor(hex: "#245264")
+        static let surfaceSoft = UIColor(hex: "#31584F")
+        static let border = UIColor(hex: "#6E9298")
         static let textPrimary = UIColor(hex: "#F2F6F4")
         static let textSecondary = UIColor(hex: "#B6C4C6")
     }
@@ -35,9 +35,9 @@ enum AppTheme {
         )
         static let cardGradient = LinearGradient(
             colors: [
-                Color(uiColor: Palette.surface),
-                Color(uiColor: Palette.surfaceSoft).opacity(0.88),
-                Color(uiColor: Palette.border).opacity(0.34)
+                Color(uiColor: Palette.surface).opacity(0.98),
+                Color(uiColor: Palette.surfaceMuted).opacity(0.74),
+                Color(uiColor: Palette.surfaceSoft).opacity(0.80)
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -53,8 +53,8 @@ enum AppTheme {
             colors: [
                 Color(uiColor: Palette.canvas),
                 Color(uiColor: Palette.canvasAlt),
-                Color(uiColor: Palette.surfaceSoft).opacity(0.90),
-                Color(uiColor: Palette.surfaceMuted).opacity(0.76)
+                Color(uiColor: Palette.surface).opacity(0.96),
+                Color(uiColor: Palette.surfaceSoft).opacity(0.76)
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -88,7 +88,7 @@ enum AppTheme {
 
 extension View {
     func appScreenBackground() -> some View {
-        background(AppTheme.Colors.screenGradient.ignoresSafeArea())
+        background(AppAmbientBackground().ignoresSafeArea())
     }
 
     func appTabBarStyle() -> some View {
@@ -98,10 +98,44 @@ extension View {
 
     func appListStyle() -> some View {
         scrollContentBackground(.hidden)
-            .background(AppTheme.Colors.screenGradient.ignoresSafeArea())
+            .background(AppAmbientBackground().ignoresSafeArea())
             .listStyle(.insetGrouped)
             .listRowBackground(AppTheme.Colors.sectionTint.opacity(0.32))
             .listRowSeparatorTint(AppTheme.Colors.border.opacity(0.9))
+    }
+
+    func appCardSurface(cornerRadius: CGFloat = AppTheme.Metrics.cardCornerRadius) -> some View {
+        background(
+            AppTheme.Colors.cardGradient,
+            in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .stroke(AppTheme.Colors.border.opacity(0.62), lineWidth: 1)
+        }
+        .shadow(color: Color.black.opacity(0.18), radius: 18, y: 9)
+    }
+}
+
+private struct AppAmbientBackground: View {
+    var body: some View {
+        ZStack {
+            AppTheme.Colors.screenGradient
+
+            Circle()
+                .fill(AppTheme.Colors.accent.opacity(0.12))
+                .frame(width: 340, height: 340)
+                .blur(radius: 70)
+                .offset(x: 160, y: -300)
+
+            Circle()
+                .fill(AppTheme.Colors.accentSecondary.opacity(0.10))
+                .frame(width: 420, height: 420)
+                .blur(radius: 90)
+                .offset(x: -170, y: 330)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 

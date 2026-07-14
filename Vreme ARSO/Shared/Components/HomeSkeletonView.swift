@@ -6,7 +6,7 @@ struct HomeSkeletonView: View {
             VStack(alignment: .leading, spacing: 16) {
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
                     .fill(AppTheme.Colors.cardBackground)
-                    .frame(height: 210)
+                    .frame(height: 310)
                     .overlay(alignment: .leading) {
                         VStack(alignment: .leading, spacing: 12) {
                             RoundedRectangle(cornerRadius: 8).fill(Color.secondary.opacity(0.15)).frame(width: 120, height: 18)

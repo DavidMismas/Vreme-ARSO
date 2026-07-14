@@ -53,6 +53,7 @@ struct WidgetWeatherContent: Codable {
     let primaryWarning: WidgetWarningSummary?
     let forecastSnippetTitle: String?
     let forecastSnippet: String?
+    let seaTemperatureText: String?
     let detailText: String
 
     func markedAsFallback() -> WidgetWeatherContent {
@@ -66,6 +67,7 @@ struct WidgetWeatherContent: Codable {
             primaryWarning: primaryWarning,
             forecastSnippetTitle: forecastSnippetTitle,
             forecastSnippet: forecastSnippet,
+            seaTemperatureText: seaTemperatureText,
             detailText: detailText
         )
     }
@@ -86,6 +88,7 @@ struct WidgetWeatherContent: Codable {
         primaryWarning: WidgetWarningSummary(title: "Rumeno opozorilo", area: "Osrednja Slovenija", severity: "moderate"),
         forecastSnippetTitle: "Napoved",
         forecastSnippet: "Danes bo delno do zmerno oblačno, veter bo večinoma šibak.",
+        seaTemperatureText: "Morje 18 °C",
         detailText: "Vir podatkov: ARSO."
     )
 }

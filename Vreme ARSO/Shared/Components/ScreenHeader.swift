@@ -39,11 +39,6 @@ struct ScreenHeader: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppTheme.Colors.cardGradient, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(AppTheme.Colors.border.opacity(0.9), lineWidth: 1)
-        }
-        .shadow(color: AppTheme.Colors.accent.opacity(0.1), radius: 16, y: 8)
+        .appCardSurface(cornerRadius: 24)
     }
 }

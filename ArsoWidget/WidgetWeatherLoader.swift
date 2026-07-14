@@ -21,11 +21,16 @@ struct WidgetWeatherLoader {
 
         do {
             let resolved = try await resolveLocation(preference: preference)
-            let forecastPayload = try await fetchJSON(from: resolved.forecastURL)
-            let nonlocationPayload = try? await fetchJSON(from: URL(string: "https://vreme.arso.gov.si/api/1.0/nonlocation/?lang=sl")!)
+            async let forecastPayloadTask = fetchJSON(from: resolved.forecastURL)
+            async let nonlocationPayloadTask = try? fetchJSON(from: URL(string: "https://vreme.arso.gov.si/api/1.0/nonlocation/?lang=sl")!)
+            async let seaTemperatureTask = try? fetchSeaTemperatureText()
+            let forecastPayload = try await forecastPayloadTask
+            let nonlocationPayload = await nonlocationPayloadTask
+            let seaTemperatureText = await seaTemperatureTask
             let content = try parseContent(
                 forecastPayload: forecastPayload,
                 nonlocationPayload: nonlocationPayload,
+                seaTemperatureText: seaTemperatureText,
                 preferredDisplayName: resolved.displayName,
                 fallbackLocation: resolved.isFallback
             )
@@ -165,6 +170,29 @@ struct WidgetWeatherLoader {
         return json
     }
 
+    private func fetchSeaTemperatureText() async throws -> String? {
+        guard let url = URL(string: "https://meteo.arso.gov.si/uploads/probase/www/fproduct/text/sl/fcast_si-coast_latest.html") else {
+            return nil
+        }
+
+        var request = URLRequest(url: url)
+        request.cachePolicy = .useProtocolCachePolicy
+        request.timeoutInterval = 20
+        request.setValue("VremeARSOWidget/1.0 (iOS WidgetKit)", forHTTPHeaderField: "User-Agent")
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, 200..<300 ~= httpResponse.statusCode else {
+            throw WidgetLoaderError.invalidResponse
+        }
+
+        guard let html = String(data: data, encoding: .utf8),
+              let seaTemperature = parseSeaTemperature(from: html) else {
+            return nil
+        }
+
+        return "Morje \(seaTemperature)"
+    }
+
     private func cacheKey(for preference: WidgetLocationPreference) -> String {
         [
             preference.useSelectedFavoriteStation ? "favorite" : "nofavorite",
@@ -189,6 +217,7 @@ struct WidgetWeatherLoader {
     private func parseContent(
         forecastPayload: [String: Any],
         nonlocationPayload: [String: Any]?,
+        seaTemperatureText: String?,
         preferredDisplayName: String?,
         fallbackLocation: Bool
     ) throws -> WidgetWeatherContent {
@@ -238,8 +267,23 @@ struct WidgetWeatherLoader {
             primaryWarning: primaryWarning,
             forecastSnippetTitle: forecastSnippet?.title,
             forecastSnippet: forecastSnippet?.body,
+            seaTemperatureText: seaTemperatureText,
             detailText: detailText
         )
+    }
+
+    private func parseSeaTemperature(from html: String) -> String? {
+        guard
+            let rowHTML = firstRegexMatch(
+                in: html,
+                pattern: "<tr>\\s*<td[^>]*>\\s*Temp\\. morja\\s*</td>(.*?)</tr>"
+            ),
+            let valueHTML = firstRegexMatch(in: rowHTML, pattern: "<td[^>]*>(.*?)</td>")
+        else {
+            return nil
+        }
+
+        return valueHTML.strippedWidgetHTML().nilIfBlank
     }
 
     private func parseDay(from payload: [String: Any]) -> WidgetForecastDay? {
@@ -369,6 +413,23 @@ struct WidgetWeatherLoader {
         values.compactMap { $0?.nilIfBlank }.first
     }
 
+    private func firstRegexMatch(in text: String, pattern: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators, .caseInsensitive]) else {
+            return nil
+        }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        guard
+            let match = regex.firstMatch(in: text, range: range),
+            match.numberOfRanges >= 2,
+            let captureRange = Range(match.range(at: 1), in: text)
+        else {
+            return nil
+        }
+
+        return String(text[captureRange])
+    }
+
     private func coordinate(latitude: Double?, longitude: Double?) -> CLLocationCoordinate2D? {
         guard let latitude, let longitude else { return nil }
         return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
@@ -445,5 +506,21 @@ private extension String {
 
     var capitalizedSentence: String {
         prefix(1).uppercased() + dropFirst()
+    }
+
+    func strippedWidgetHTML() -> String {
+        let withoutTags = replacingOccurrences(
+            of: "<[^>]+>",
+            with: "",
+            options: .regularExpression
+        )
+
+        return withoutTags
+            .replacingOccurrences(of: "&deg;", with: "°")
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+            .replacingOccurrences(of: "&#176;", with: "°")
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

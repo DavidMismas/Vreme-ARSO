@@ -8,11 +8,14 @@ struct ARSOWaterTemperaturesService {
         async let overviewData = try? await apiClient.data(for: .mountainSeaOverview)
 
         let slots = try parseCoastSlots(from: await coastData)
-        let statusMessage = try await overviewData.flatMap(parseStatusMessage(from:))
+        let overview = await overviewData
+        let statusMessage = try overview.flatMap(parseStatusMessage(from:))
+        let waterMapURL = try overview.flatMap(parseWaterMapURL(from:))
 
         return WaterTemperatureReport(
             issuedAtText: slots.first?.label,
             statusMessage: statusMessage,
+            waterMapURL: waterMapURL,
             slots: slots,
             sourceURL: Endpoint.coastForecast.url
         )
@@ -56,15 +59,32 @@ struct ARSOWaterTemperaturesService {
         guard let html = String(data: data, encoding: .utf8) else {
             return nil
         }
+        let visibleHTML = html.removingHTMLComments()
 
         if let unavailable = firstMatch(
-            in: html,
+            in: visibleHTML,
             pattern: "<h3>\\s*(Temperature rek, jezer in morja.*?)\\s*</h3>"
         ) {
             return unavailable.arsoStrippedHTML()
         }
 
         return nil
+    }
+
+    func parseWaterMapURL(from data: Data) throws -> URL? {
+        guard let html = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        let visibleHTML = html.removingHTMLComments()
+
+        guard let imagePath = firstMatch(
+            in: visibleHTML,
+            pattern: "<img[^>]+src=\"([^\"]*T_vode_latest\\.png)\""
+        ) else {
+            return nil
+        }
+
+        return URL(string: imagePath, relativeTo: Endpoint.mountainSeaOverview.url)?.absoluteURL
     }
 
     private func rowValues(matching label: String, in rows: [[String]]) -> [[String]] {
@@ -99,5 +119,16 @@ struct ARSOWaterTemperaturesService {
             }
             return String(text[range])
         }
+    }
+}
+
+private extension String {
+    func removingHTMLComments() -> String {
+        guard let regex = try? NSRegularExpression(pattern: "<!--.*?-->", options: [.dotMatchesLineSeparators]) else {
+            return self
+        }
+
+        let range = NSRange(startIndex..<endIndex, in: self)
+        return regex.stringByReplacingMatches(in: self, range: range, withTemplate: "")
     }
 }

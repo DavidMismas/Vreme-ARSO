@@ -23,6 +23,29 @@ final class ARSOWaterTemperaturesServiceTests: XCTestCase {
 
         XCTAssertEqual(message, "Temperature rek, jezer in morja začasno niso dosegljive.")
     }
+
+    func testOverviewParsingIgnoresCommentedUnavailableMessageAndReadsWaterMap() throws {
+        let data = """
+        <!DOCTYPE html>
+        <html>
+        <body>
+        <div id="pills-reke">
+          <h2><b>Temperatura rek, jezer in morja</b></h2>
+          <!--<h3>Temperature rek, jezer in morja začasno niso dosegljive.</h3>-->
+          <img style="width:80%" class="center" src="./assets/hydro/T_vode_latest.png" alt="temperature">
+        </div>
+        </body>
+        </html>
+        """.data(using: .utf8)!
+
+        let service = ARSOWaterTemperaturesService(apiClient: MockAPIClient())
+
+        XCTAssertNil(try service.parseStatusMessage(from: data))
+        XCTAssertEqual(
+            try service.parseWaterMapURL(from: data)?.absoluteString,
+            "https://meteo.arso.gov.si/uploads/probase/www/sproduct/mountain/assets/hydro/T_vode_latest.png"
+        )
+    }
 }
 
 private struct MockAPIClient: APIClientProtocol {

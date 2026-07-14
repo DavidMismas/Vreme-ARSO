@@ -38,6 +38,9 @@ enum Endpoint {
     case coastForecast
     case mountainForecast
     case mountainSeaOverview
+    case airQualityHourlyLatest
+    case airQualityDailyLatest
+    case airQualityHourlySevenDays
     case locationForecast(locationName: String)
     case nearestForecastLocation(latitude: Double, longitude: Double)
     case graphicTimeline(kind: GraphicKind)
@@ -78,6 +81,12 @@ enum Endpoint {
             return Self.baseURL.appending(path: "/uploads/probase/www/fproduct/text/sl/forecast_si-mountain_latest.html")
         case .mountainSeaOverview:
             return Self.baseURL.appending(path: "/uploads/probase/www/sproduct/mountain/")
+        case .airQualityHourlyLatest:
+            return URL(string: "https://www.arso.gov.si/xml/zrak/ones_zrak_urni_podatki_zadnji.xml")!
+        case .airQualityDailyLatest:
+            return URL(string: "https://www.arso.gov.si/xml/zrak/ones_zrak_dnevni_podatki_zadnji.xml")!
+        case .airQualityHourlySevenDays:
+            return URL(string: "https://www.arso.gov.si/xml/zrak/ones_zrak_urni_podatki_7dni.xml")!
         case .locationForecast(let locationName):
             var components = URLComponents(url: Self.vremeBaseURL.appending(path: "/api/1.0/location/"), resolvingAgainstBaseURL: false)
             components?.queryItems = [
@@ -101,7 +110,7 @@ enum Endpoint {
 
     var refreshPolicy: RefreshPolicy {
         switch self {
-        case .observationsOverview:
+        case .observationsOverview, .airQualityHourlyLatest, .airQualityDailyLatest, .airQualityHourlySevenDays:
             return .currentConditions
         case .radarTimeline, .satelliteLatestImage, .satelliteLatestAnimation, .coastForecast, .mountainForecast, .mountainSeaOverview, .graphicTimeline, .graphicLatest:
             return .imagery
