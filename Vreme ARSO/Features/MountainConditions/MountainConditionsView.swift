@@ -22,10 +22,18 @@ struct MountainConditionsView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         ForEach(report.locations) { location in
-                            MountainLocationCard(
-                                location: location,
-                                iconProvider: container.weatherIconProvider
-                            )
+                            NavigationLink {
+                                MountainLocationDetailView(
+                                    location: location,
+                                    iconProvider: container.weatherIconProvider
+                                )
+                            } label: {
+                                MountainLocationCard(
+                                    location: location,
+                                    iconProvider: container.weatherIconProvider
+                                )
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                     .padding()
@@ -54,7 +62,6 @@ struct MountainConditionsView: View {
 private struct MountainLocationCard: View {
     let location: MountainConditionLocation
     let iconProvider: WeatherIconProvider
-    @State private var expanded = false
 
     var body: some View {
         CardSection(title: location.name, systemImage: "mountain.2") {
@@ -82,22 +89,65 @@ private struct MountainLocationCard: View {
                 }
             }
 
-            if location.slots.count > 2 {
-                DisclosureGroup(isExpanded: $expanded) {
-                    VStack(spacing: 10) {
-                        ForEach(Array(location.slots.dropFirst(2))) { slot in
-                            MountainSlotCompact(slot: slot, iconProvider: iconProvider)
-                        }
-                    }
-                    .padding(.top, 8)
-                } label: {
-                    Text("Pokaži dodatne termine")
-                        .font(.subheadline.weight(.semibold))
-                }
+            HStack(spacing: 6) {
+                Text("Odpri vse termine")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.Colors.accent)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(AppTheme.Colors.accent)
             }
+            .padding(.top, 2)
 
             SourceBadge()
         }
+    }
+}
+
+private struct MountainLocationDetailView: View {
+    let location: MountainConditionLocation
+    let iconProvider: WeatherIconProvider
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                CardSection(title: "Trenutno", systemImage: "mountain.2") {
+                    if let issuedAtText = location.issuedAtText {
+                        Text(issuedAtText)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if let current = location.slots.first {
+                        MountainSlotSummary(
+                            slot: current,
+                            topElevation: location.topElevation,
+                            bottomElevation: location.bottomElevation,
+                            iconProvider: iconProvider
+                        )
+                    } else {
+                        Text("Za to lokacijo trenutno ni podrobnih podatkov.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    SourceBadge()
+                }
+
+                CardSection(title: "Vsi termini", systemImage: "calendar") {
+                    VStack(spacing: 10) {
+                        ForEach(location.slots) { slot in
+                            MountainSlotCompact(slot: slot, iconProvider: iconProvider)
+                        }
+                    }
+                }
+            }
+            .padding()
+        }
+        .navigationTitle(location.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .appScreenBackground()
     }
 }
 
