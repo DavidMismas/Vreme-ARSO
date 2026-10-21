@@ -50,7 +50,8 @@ final class LocationService: NSObject, ObservableObject {
             manager.requestLocation()
 
             pendingLocationTimeoutTask = Task { @MainActor in
-                try? await Task.sleep(nanoseconds: timeoutNanoseconds)
+                do { try await Task.sleep(nanoseconds: timeoutNanoseconds) }
+                catch { return }
 
                 guard self.pendingLocationContinuation != nil else { return }
                 self.resolvePendingLocationRequest(with: nil)

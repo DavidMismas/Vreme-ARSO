@@ -43,6 +43,38 @@ final class SettingsStore: ObservableObject {
         }
     }
 
+    @Published var autoRefreshInterval: AutoRefreshInterval {
+        didSet {
+            defaults.set(autoRefreshInterval.rawValue, forKey: Keys.autoRefreshHours)
+            syncWidgetPreferences()
+        }
+    }
+
+    @Published var widgetSupplementKind: WidgetSupplementKind {
+        didSet {
+            defaults.set(widgetSupplementKind.rawValue, forKey: "widgetSupplementKind")
+            syncWidgetPreferences()
+        }
+    }
+    @Published private(set) var widgetSnowStationID: String
+    @Published private(set) var widgetSnowStationName: String
+    @Published private(set) var widgetAirStationID: String
+    @Published private(set) var widgetAirStationName: String
+
+    func selectWidgetStation(kind: WidgetSupplementKind, id: String, name: String) {
+        let prefix = kind == .snow ? "widgetSnow" : "widgetAir"
+        if kind == .snow {
+            widgetSnowStationID = id
+            widgetSnowStationName = name
+        } else {
+            widgetAirStationID = id
+            widgetAirStationName = name
+        }
+        defaults.set(id, forKey: "\(prefix)StationID")
+        defaults.set(name, forKey: "\(prefix)StationName")
+        syncWidgetPreferences()
+    }
+
     @Published var manualLocationName: String? {
         didSet {
             defaults.set(manualLocationName, forKey: Keys.manualLocationName)
@@ -92,10 +124,16 @@ final class SettingsStore: ObservableObject {
     }
 
     init() {
+        widgetSupplementKind = WidgetSupplementKind(rawValue: defaults.string(forKey: "widgetSupplementKind") ?? "") ?? .sea
+        widgetSnowStationID = defaults.string(forKey: "widgetSnowStationID") ?? ""
+        widgetSnowStationName = defaults.string(forKey: "widgetSnowStationName") ?? ""
+        widgetAirStationID = defaults.string(forKey: "widgetAirStationID") ?? ""
+        widgetAirStationName = defaults.string(forKey: "widgetAirStationName") ?? ""
         selectedStationID = defaults.string(forKey: Keys.selectedStationID)
         useSelectedFavoriteStationForPrimaryViews = defaults.object(forKey: Keys.useSelectedFavoriteStationForPrimaryViews) as? Bool ?? false
         useCurrentLocation = defaults.object(forKey: Keys.useCurrentLocation) as? Bool ?? true
         autoRefreshEnabled = defaults.object(forKey: Keys.autoRefreshEnabled) as? Bool ?? true
+        autoRefreshInterval = AutoRefreshInterval(rawValue: defaults.integer(forKey: Keys.autoRefreshHours)) ?? .hourly
         manualLocationName = defaults.string(forKey: Keys.manualLocationName)
         manualLocationLatitude = defaults.object(forKey: Keys.manualLocationLatitude) as? Double
         manualLocationLongitude = defaults.object(forKey: Keys.manualLocationLongitude) as? Double
@@ -202,9 +240,11 @@ final class SettingsStore: ObservableObject {
         let activeSelectedStationLatitude = pinnedFavoriteStationID == nil ? nil : selectedStationLatitude
         let activeSelectedStationLongitude = pinnedFavoriteStationID == nil ? nil : selectedStationLongitude
 
+        WidgetSharedStore.syncSupplementPreferences(kind: widgetSupplementKind, snowID: widgetSnowStationID, snowName: widgetSnowStationName, airID: widgetAirStationID, airName: widgetAirStationName)
         WidgetSharedStore.syncPreferences(
             useCurrentLocation: useCurrentLocation,
             autoRefreshEnabled: autoRefreshEnabled,
+            autoRefreshHours: autoRefreshInterval.rawValue,
             manualLocationName: manualLocationName,
             manualLatitude: manualLocationLatitude,
             manualLongitude: manualLocationLongitude,
@@ -237,6 +277,7 @@ private enum Keys {
     static let selectedStationID = "selectedStationID"
     static let useSelectedFavoriteStationForPrimaryViews = "useSelectedFavoriteStationForPrimaryViews"
     static let useCurrentLocation = "useCurrentLocation"
+    static let autoRefreshHours = "autoRefreshHours"
     static let autoRefreshEnabled = "autoRefreshEnabled"
     static let favoriteStationIDs = "favoriteStationIDs"
     static let manualLocationName = "manualLocationName"

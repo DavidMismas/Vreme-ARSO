@@ -108,6 +108,9 @@ struct ForecastTextView: View {
                 await viewModel.load()
                 configureDefaultExpansionIfNeeded()
             }
+            .onReceive(NotificationCenter.default.publisher(for: .weatherDataDidRefresh)) { _ in
+                Task { await viewModel.load() }
+            }
             .appScreenBackground()
         }
     }

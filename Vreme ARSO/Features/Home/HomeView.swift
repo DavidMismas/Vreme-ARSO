@@ -6,14 +6,7 @@ struct HomeView: View {
     let container: AppContainer
     @ObservedObject var settingsStore: SettingsStore
     @ObservedObject var locationService: LocationService
-    @StateObject private var viewModel: HomeViewModel
-
-    init(container: AppContainer, settingsStore: SettingsStore, locationService: LocationService) {
-        self.container = container
-        self.settingsStore = settingsStore
-        self.locationService = locationService
-        _viewModel = StateObject(wrappedValue: HomeViewModel(container: container))
-    }
+    @ObservedObject var viewModel: HomeViewModel
 
     var body: some View {
         NavigationStack {
@@ -21,28 +14,7 @@ struct HomeView: View {
                 .navigationTitle("Vreme")
                 .navigationBarTitleDisplayMode(.inline)
                 .animation(.easeInOut(duration: 0.22), value: viewModel.state?.location.displayName)
-                .task {
-                    locationService.requestAccessIfNeeded()
-                    _ = viewModel.restorePersistedStateIfAvailable()
-
-                    if settingsStore.autoRefreshEnabled || viewModel.state == nil {
-                        await refreshHome(forceLocationRefresh: true)
-                    }
-                }
-                .onChange(of: settingsStore.homeLocationPreferenceKey) { _, _ in
-                    reloadHome()
-                }
-                .onChange(of: settingsStore.favoriteStationIDs) { _, _ in
-                    reloadHome()
-                }
-                .onChange(of: settingsStore.autoRefreshEnabled) { _, isEnabled in
-                    guard isEnabled else { return }
-                    reloadHome()
-                }
-                .onChange(of: currentLocationSignature) { _, _ in
-                    guard settingsStore.useCurrentLocation, settingsStore.autoRefreshEnabled else { return }
-                    reloadHome()
-                }
+                .preference(key: WeatherAtmospherePreference.self, value: viewModel.state.map { WeatherAtmosphere($0.condition) })
                 .appScreenBackground()
         }
     }
@@ -62,37 +34,12 @@ struct HomeView: View {
         }
     }
 
-    private func load() async {
-        let currentLocation: CLLocation?
-        currentLocation = settingsStore.useCurrentLocation ? locationService.currentLocation : nil
-
-        await viewModel.load(
-            settings: settingsStore,
-            currentLocation: currentLocation
-        )
-    }
-
-    private func refreshHome(forceLocationRefresh: Bool) async {
-        let refreshedLocation: CLLocation?
-        if settingsStore.useCurrentLocation, forceLocationRefresh {
-            refreshedLocation = await locationService.refreshLocationAndWait()
-        } else {
-            refreshedLocation = settingsStore.useCurrentLocation ? locationService.currentLocation : nil
-        }
-
-        await viewModel.load(
-            settings: settingsStore,
-            currentLocation: refreshedLocation
-        )
+    private func refreshHome() async {
+        await viewModel.refresh(settings: settingsStore, locationService: locationService)
     }
 
     private func reloadHome() {
-        Task { await load() }
-    }
-
-    private var currentLocationSignature: String {
-        guard let coordinate = locationService.currentLocation?.coordinate else { return "" }
-        return "\(coordinate.latitude),\(coordinate.longitude)"
+        Task { await refreshHome() }
     }
 
     private func stateContent(_ state: HomeViewModel.State) -> some View {
@@ -115,7 +62,7 @@ struct HomeView: View {
         }
         .scrollIndicators(.hidden)
         .refreshable {
-            await refreshHome(forceLocationRefresh: true)
+            await refreshHome()
         }
         .appScreenBackground()
     }
@@ -517,6 +464,9 @@ final class HomeViewModel: ObservableObject {
     @Published private(set) var errorMessage: String?
 
     private let container: AppContainer
+    private var isRefreshing = false
+    private var pendingPreferenceRefresh = false
+    private(set) var lastRefreshAttempt: Date?
 
     init(container: AppContainer) {
         self.container = container
@@ -531,6 +481,31 @@ final class HomeViewModel: ObservableObject {
         }
         errorMessage = nil
         return true
+    }
+
+    func refresh(settings: SettingsStore, locationService: LocationService) async {
+        guard !isRefreshing else {
+            pendingPreferenceRefresh = true
+            return
+        }
+        isRefreshing = true
+        lastRefreshAttempt = .now
+        defer {
+            isRefreshing = false
+            if Task.isCancelled { lastRefreshAttempt = nil }
+            if pendingPreferenceRefresh {
+                pendingPreferenceRefresh = false
+                Task { await self.refresh(settings: settings, locationService: locationService) }
+            }
+        }
+        let location: CLLocation?
+        if settings.useCurrentLocation && settings.pinnedFavoriteStationID == nil {
+            location = await locationService.refreshLocationAndWait() ?? locationService.currentLocation
+        } else {
+            location = nil
+        }
+        guard !Task.isCancelled else { return }
+        await load(settings: settings, currentLocation: location)
     }
 
     func load(settings: SettingsStore, currentLocation: CLLocation?) async {
@@ -608,11 +583,13 @@ final class HomeViewModel: ObservableObject {
                 fetchedAt: Date()
             )
 
+            guard !Task.isCancelled else { return }
             withAnimation(.easeInOut(duration: 0.22)) {
                 state = nextState
             }
             errorMessage = nil
             HomeStateStore.save(nextState)
+            WidgetSharedStore.weatherDidRefresh()
             Task {
                 await container.imageCacheService.preload(urls: previewURLs)
             }
@@ -938,5 +915,5 @@ private struct CachedSatelliteFrame: Codable {
 }
 
 #Preview {
-    HomeView(container: .live, settingsStore: SettingsStore(), locationService: LocationService())
+    HomeView(container: .live, settingsStore: SettingsStore(), locationService: LocationService(), viewModel: HomeViewModel(container: .live))
 }

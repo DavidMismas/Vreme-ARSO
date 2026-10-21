@@ -55,6 +55,8 @@ struct WidgetWeatherContent: Codable {
     let forecastSnippet: String?
     let seaTemperatureText: String?
     let detailText: String
+    var supplement: WidgetSupplementValue? = nil
+    var supplementSelectionKey: String? = nil
 
     func markedAsFallback() -> WidgetWeatherContent {
         WidgetWeatherContent(
@@ -68,8 +70,18 @@ struct WidgetWeatherContent: Codable {
             forecastSnippetTitle: forecastSnippetTitle,
             forecastSnippet: forecastSnippet,
             seaTemperatureText: seaTemperatureText,
-            detailText: detailText
+            detailText: detailText,
+            supplement: supplement,
+            supplementSelectionKey: supplementSelectionKey
         )
+    }
+
+    func matchingSupplement(_ selection: WidgetSupplementSelection) -> WidgetWeatherContent {
+        guard supplementSelectionKey != selection.cacheKey else { return self }
+        var content = self
+        content.supplement = selection.unavailable
+        content.supplementSelectionKey = selection.cacheKey
+        return content
     }
 
     static let placeholder = WidgetWeatherContent(
@@ -89,6 +101,8 @@ struct WidgetWeatherContent: Codable {
         forecastSnippetTitle: "Napoved",
         forecastSnippet: "Danes bo delno do zmerno oblačno, veter bo večinoma šibak.",
         seaTemperatureText: "Morje 18 °C",
-        detailText: "Vir podatkov: ARSO."
+        detailText: "Vir podatkov: ARSO.",
+        supplement: WidgetSupplementValue(kind: .sea, stationName: "Obala", value: "18 °C", measuredAt: nil),
+        supplementSelectionKey: "sea||"
     )
 }

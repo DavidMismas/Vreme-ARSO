@@ -9,9 +9,19 @@ enum WidgetSharedStore {
         UserDefaults(suiteName: appGroupID)
     }
 
+    static func syncSupplementPreferences(kind: WidgetSupplementKind, snowID: String, snowName: String, airID: String, airName: String) {
+        guard let sharedDefaults else { return }
+        sharedDefaults.set(kind.rawValue, forKey: "widgetSupplementKind")
+        sharedDefaults.set(snowID, forKey: "widgetSnowStationID")
+        sharedDefaults.set(snowName, forKey: "widgetSnowStationName")
+        sharedDefaults.set(airID, forKey: "widgetAirStationID")
+        sharedDefaults.set(airName, forKey: "widgetAirStationName")
+    }
+
     static func syncPreferences(
         useCurrentLocation: Bool,
         autoRefreshEnabled: Bool,
+        autoRefreshHours: Int,
         manualLocationName: String?,
         manualLatitude: Double?,
         manualLongitude: Double?,
@@ -23,6 +33,7 @@ enum WidgetSharedStore {
         guard let sharedDefaults else { return }
 
         sharedDefaults.set(useCurrentLocation, forKey: Keys.useCurrentLocation)
+        sharedDefaults.set(autoRefreshHours, forKey: Keys.autoRefreshHours)
         sharedDefaults.set(autoRefreshEnabled, forKey: Keys.autoRefreshEnabled)
         sharedDefaults.set(manualLocationName, forKey: Keys.manualLocationName)
         sharedDefaults.set(manualLatitude, forKey: Keys.manualLocationLatitude)
@@ -34,11 +45,17 @@ enum WidgetSharedStore {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
+    static func weatherDidRefresh() {
+        sharedDefaults?.set(Date().timeIntervalSince1970, forKey: "widgetRefreshGeneration")
+        WidgetCenter.shared.reloadAllTimelines()
+        NotificationCenter.default.post(name: .weatherDataDidRefresh, object: nil)
+    }
+
     static func syncCurrentLocation(_ location: CLLocation?) {
-        guard
-            let sharedDefaults,
-            let location
-        else {
+        guard let sharedDefaults else { return }
+        guard let location else {
+            sharedDefaults.removeObject(forKey: Keys.currentLocationLatitude)
+            sharedDefaults.removeObject(forKey: Keys.currentLocationLongitude)
             return
         }
 
@@ -50,6 +67,7 @@ enum WidgetSharedStore {
 
 private enum Keys {
     static let useCurrentLocation = "useCurrentLocation"
+    static let autoRefreshHours = "autoRefreshHours"
     static let autoRefreshEnabled = "autoRefreshEnabled"
     static let manualLocationName = "manualLocationName"
     static let manualLocationLatitude = "manualLocationLatitude"
@@ -60,4 +78,9 @@ private enum Keys {
     static let selectedStationLongitude = "selectedStationLongitude"
     static let currentLocationLatitude = "widgetCurrentLocationLatitude"
     static let currentLocationLongitude = "widgetCurrentLocationLongitude"
+}
+
+
+extension Notification.Name {
+    static let weatherDataDidRefresh = Notification.Name("weatherDataDidRefresh")
 }

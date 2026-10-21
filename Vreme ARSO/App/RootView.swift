@@ -5,6 +5,22 @@ struct RootView: View {
     @ObservedObject var settingsStore: SettingsStore
     @ObservedObject var locationService: LocationService
 
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var homeViewModel: HomeViewModel
+
+    init(container: AppContainer, settingsStore: SettingsStore, locationService: LocationService) {
+        self.container = container
+        self.settingsStore = settingsStore
+        self.locationService = locationService
+        _homeViewModel = StateObject(wrappedValue: HomeViewModel(container: container))
+    }
+
+    private var refreshTaskID: String {
+        "\(scenePhase)|\(settingsStore.autoRefreshEnabled)|\(settingsStore.autoRefreshInterval.rawValue)|\(settingsStore.homeLocationPreferenceKey)"
+    }
+
+    @State private var atmosphere: WeatherAtmosphere = .cloudy
+
     var body: some View {
         ZStack {
             AppTheme.Colors.screenBackground
@@ -14,7 +30,8 @@ struct RootView: View {
                 HomeView(
                     container: container,
                     settingsStore: settingsStore,
-                    locationService: locationService
+                    locationService: locationService,
+                    viewModel: homeViewModel
                 )
                 .appTabBarStyle()
                 .tabItem {
@@ -59,6 +76,33 @@ struct RootView: View {
             .tint(AppTheme.Colors.accent)
         }
         .appScreenBackground()
+        .environment(\.weatherAtmosphere, atmosphere)
+        .task(id: refreshTaskID) {
+            guard scenePhase == .active else { return }
+            locationService.requestAccessIfNeeded()
+            if homeViewModel.state == nil {
+                homeViewModel.restorePersistedStateIfAvailable()
+            }
+            while !Task.isCancelled {
+                let canRetry = homeViewModel.lastRefreshAttempt.map { Date().timeIntervalSince($0) >= 300 } ?? true
+                if canRetry && (homeViewModel.state == nil || (settingsStore.autoRefreshEnabled && settingsStore.autoRefreshInterval.isDue(lastUpdate: homeViewModel.state?.fetchedAt))) {
+                    await homeViewModel.refresh(settings: settingsStore, locationService: locationService)
+                }
+                do { try await Task.sleep(for: .seconds(30)) }
+                catch { return }
+            }
+        }
+        .onChange(of: settingsStore.homeLocationPreferenceKey) { _, _ in
+            Task { await homeViewModel.refresh(settings: settingsStore, locationService: locationService) }
+        }
+        .onChange(of: locationService.authorizationStatus) { _, status in
+            guard scenePhase == .active, settingsStore.useCurrentLocation,
+                  status == .authorizedWhenInUse || status == .authorizedAlways else { return }
+            Task { await homeViewModel.refresh(settings: settingsStore, locationService: locationService) }
+        }
+        .onPreferenceChange(WeatherAtmospherePreference.self) { value in
+            if let value { atmosphere = value }
+        }
     }
 }
 

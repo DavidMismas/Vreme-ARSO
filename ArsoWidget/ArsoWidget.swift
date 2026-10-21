@@ -22,8 +22,11 @@ struct ArsoWidgetProvider: TimelineProvider {
         Task {
             let content = await WidgetWeatherLoader().loadContent()
             let entry = ArsoWidgetEntry(date: .now, content: content)
-            let nextRefresh = Calendar.current.date(byAdding: .minute, value: 30, to: .now) ?? .now.addingTimeInterval(1800)
-            completion(Timeline(entries: [entry], policy: .after(nextRefresh)))
+            let defaults = WidgetSharedStore.defaults
+            let enabled = defaults?.object(forKey: WidgetSharedStore.Keys.autoRefreshEnabled) as? Bool ?? true
+            let hours = defaults?.integer(forKey: "autoRefreshHours") ?? 1
+            let interval = TimeInterval(([1, 3, 6].contains(hours) ? hours : 1) * 3600)
+            completion(Timeline(entries: [entry], policy: enabled ? .after(.now.addingTimeInterval(interval)) : .never))
         }
     }
 }
@@ -45,7 +48,9 @@ struct ArsoWidgetEntryView: View {
                 SmallCurrentWidgetView(content: entry.content)
             }
         }
-        .widgetContainerBackground()
+        .foregroundStyle(.white)
+        .environment(\.colorScheme, .dark)
+        .widgetContainerBackground(condition: entry.content.currentCondition)
     }
 }
 
@@ -72,6 +77,7 @@ struct ArsoForecastMediumWidget: Widget {
         .configurationDisplayName("ARSO 5 dni")
         .description("Petdnevna grafična napoved za izbrano lokacijo.")
         .supportedFamilies([.systemMedium])
+        .contentMarginsDisabled()
     }
 }
 
@@ -145,9 +151,9 @@ private struct MediumForecastWidgetView: View {
                 }
             }
         }
-        .padding(.top, 18)
+        .padding(.top, 10)
         .padding(.horizontal, 18)
-        .padding(.bottom, 16)
+        .padding(.bottom, 10)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
     
@@ -170,16 +176,18 @@ private struct MediumForecastWidgetView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.82)
+            }
 
-                if let seaTemperatureText = content.seaTemperatureText {
-                    Label(seaTemperatureText, systemImage: "water.waves")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(WidgetTheme.glassPill, in: Capsule())
-                }
+            if let supplement = content.supplement {
+                Label(supplement.text, systemImage: supplement.kind.symbol)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(WidgetTheme.glassPill, in: Capsule())
+                    .minimumScaleFactor(0.8)
+                    .accessibilityLabel("\(supplement.kind.title), \(supplement.text)")
             }
         }
     }
@@ -228,8 +236,8 @@ private struct LargeForecastWidgetView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-                if let seaTemperatureText = content.seaTemperatureText {
-                    Label(seaTemperatureText, systemImage: "water.waves")
+                if let supplement = content.supplement {
+                    Label(supplement.text, systemImage: supplement.kind.symbol)
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -289,7 +297,7 @@ private struct WidgetForecastColumn: View {
     var isCompact = false
 
     var body: some View {
-        VStack(spacing: isCompact ? 4 : 6) {
+        VStack(spacing: isCompact ? 3 : 6) {
             Text(day.weekday)
                 .font((isCompact ? Font.caption2 : .caption2).weight(.semibold))
                 .foregroundStyle(.secondary)
@@ -303,7 +311,7 @@ private struct WidgetForecastColumn: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
-        .padding(.vertical, isCompact ? 6 : 8)
+        .padding(.vertical, isCompact ? 4 : 8)
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: isCompact ? 14 : 16, style: .continuous)
@@ -362,22 +370,32 @@ private enum WidgetTheme {
 
 private extension View {
     @ViewBuilder
-    func widgetContainerBackground() -> some View {
+    func widgetContainerBackground(condition: WidgetWeatherCondition) -> some View {
         if #available(iOS 17.0, *) {
             containerBackground(for: .widget) {
-                WidgetGlassBackground()
+                WidgetGlassBackground(condition: condition)
             }
         } else {
             padding(0)
-                .background(WidgetGlassBackground())
+                .background(WidgetGlassBackground(condition: condition))
         }
     }
 }
 
 private struct WidgetGlassBackground: View {
+    let condition: WidgetWeatherCondition
+
+    private var skyColors: [Color] {
+        switch condition {
+        case .clear, .partlyCloudy: return [Color(red: 0.12, green: 0.34, blue: 0.53), Color(red: 0.08, green: 0.18, blue: 0.29)]
+        case .rain, .heavyRain, .storm: return [Color(red: 0.13, green: 0.24, blue: 0.36), Color(red: 0.04, green: 0.10, blue: 0.19)]
+        case .snow: return [Color(red: 0.32, green: 0.42, blue: 0.54), Color(red: 0.10, green: 0.19, blue: 0.30)]
+        default: return [Color(red: 0.25, green: 0.33, blue: 0.42), Color(red: 0.08, green: 0.15, blue: 0.24)]
+        }
+    }
     var body: some View {
         ZStack {
-            WidgetTheme.background
+            LinearGradient(colors: skyColors, startPoint: .topLeading, endPoint: .bottomTrailing)
 
             WidgetTheme.glassHighlight
                 .blendMode(.screen)

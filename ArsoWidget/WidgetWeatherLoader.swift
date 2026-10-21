@@ -7,15 +7,20 @@ struct WidgetWeatherLoader {
 
     func loadContent() async -> WidgetWeatherContent {
         let preference = readPreferredLocation()
-        let preferenceKey = cacheKey(for: preference)
+        let supplementSelection = WidgetSupplementSelection.read(from: WidgetSharedStore.defaults)
+        let preferenceKey = cacheKey(for: preference) + "|" + supplementSelection.cacheKey
+        let generation = WidgetSharedStore.defaults?.double(forKey: "widgetRefreshGeneration") ?? 0
+        let memoryKey = "\(preferenceKey)|\(generation)"
+        let previouslyLoaded = WidgetSharedStore.defaults?.double(forKey: "widgetLoadedGeneration") ?? 0
+        let forceRefresh = generation > previouslyLoaded
 
-        if let cachedContent = await contentCache.content(for: preferenceKey, maxAge: 10 * 60) {
+        if let cachedContent = await contentCache.content(for: memoryKey, maxAge: 10 * 60) {
             return cachedContent
         }
 
-        if !preference.autoRefreshEnabled,
+        if !preference.autoRefreshEnabled, !forceRefresh,
            let persistedContent = persistedContent(for: preferenceKey) {
-            await contentCache.store(persistedContent, for: preferenceKey)
+            await contentCache.store(persistedContent, for: memoryKey)
             return persistedContent
         }
 
@@ -23,29 +28,32 @@ struct WidgetWeatherLoader {
             let resolved = try await resolveLocation(preference: preference)
             async let forecastPayloadTask = fetchJSON(from: resolved.forecastURL)
             async let nonlocationPayloadTask = try? fetchJSON(from: URL(string: "https://vreme.arso.gov.si/api/1.0/nonlocation/?lang=sl")!)
-            async let seaTemperatureTask = try? fetchSeaTemperatureText()
+            async let supplementTask = fetchSupplement(supplementSelection)
             let forecastPayload = try await forecastPayloadTask
             let nonlocationPayload = await nonlocationPayloadTask
-            let seaTemperatureText = await seaTemperatureTask
+            let supplement = await supplementTask
             let content = try parseContent(
                 forecastPayload: forecastPayload,
                 nonlocationPayload: nonlocationPayload,
-                seaTemperatureText: seaTemperatureText,
+                supplement: supplement,
+                supplementSelectionKey: supplementSelection.cacheKey,
                 preferredDisplayName: resolved.displayName,
                 fallbackLocation: resolved.isFallback
             )
-            await contentCache.store(content, for: preferenceKey)
+            await contentCache.store(content, for: memoryKey)
             WidgetSharedStore.storeCachedContent(content, for: preferenceKey)
+            WidgetSharedStore.defaults?.set(generation, forKey: "widgetLoadedGeneration")
             return content
         } catch {
             let fallback = persistedContent(for: preferenceKey) ?? WidgetSharedStore.lastCachedContent()?.markedAsFallback()
 
             if let fallback {
-                await contentCache.store(fallback, for: preferenceKey)
-                return fallback
+                let matchingFallback = fallback.matchingSupplement(supplementSelection)
+                await contentCache.store(matchingFallback, for: memoryKey)
+                return matchingFallback
             }
 
-            return .placeholder
+            return WidgetWeatherContent.placeholder.matchingSupplement(supplementSelection)
         }
     }
 
@@ -170,6 +178,31 @@ struct WidgetWeatherLoader {
         return json
     }
 
+    private func fetchSupplement(_ selection: WidgetSupplementSelection) async -> WidgetSupplementValue {
+        do {
+            if selection.kind == .sea {
+                guard let text = try await fetchSeaTemperatureText() else { return selection.unavailable }
+                return WidgetSupplementValue(kind: .sea, stationName: "Obala", value: text.replacingOccurrences(of: "Morje ", with: ""), measuredAt: nil)
+            }
+            guard !selection.stationID.isEmpty else { return selection.unavailable }
+            let url = selection.kind == .snow
+                ? URL(string: "https://meteo.arso.gov.si/uploads/probase/www/observ/surface/text/sl/observation_si_latest.xml")!
+                : URL(string: "https://www.arso.gov.si/xml/zrak/ones_zrak_urni_podatki_zadnji.xml")!
+            var request = URLRequest(url: url)
+            request.timeoutInterval = 20
+            request.setValue("VremeARSOWidget/1.0 (iOS WidgetKit)", forHTTPHeaderField: "User-Agent")
+            let (data, response) = try await session.data(for: request)
+            guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else {
+                return selection.unavailable
+            }
+            return try selection.kind == .snow
+                ? WidgetSupplementParser.snow(data: data, selection: selection)
+                : WidgetSupplementParser.air(data: data, selection: selection)
+        } catch {
+            return selection.unavailable
+        }
+    }
+
     private func fetchSeaTemperatureText() async throws -> String? {
         guard let url = URL(string: "https://meteo.arso.gov.si/uploads/probase/www/fproduct/text/sl/fcast_si-coast_latest.html") else {
             return nil
@@ -217,7 +250,8 @@ struct WidgetWeatherLoader {
     private func parseContent(
         forecastPayload: [String: Any],
         nonlocationPayload: [String: Any]?,
-        seaTemperatureText: String?,
+        supplement: WidgetSupplementValue,
+        supplementSelectionKey: String,
         preferredDisplayName: String?,
         fallbackLocation: Bool
     ) throws -> WidgetWeatherContent {
@@ -267,8 +301,10 @@ struct WidgetWeatherLoader {
             primaryWarning: primaryWarning,
             forecastSnippetTitle: forecastSnippet?.title,
             forecastSnippet: forecastSnippet?.body,
-            seaTemperatureText: seaTemperatureText,
-            detailText: detailText
+            seaTemperatureText: nil,
+            detailText: detailText,
+            supplement: supplement,
+            supplementSelectionKey: supplementSelectionKey
         )
     }
 
@@ -499,11 +535,6 @@ private extension ISO8601DateFormatter {
 }
 
 private extension String {
-    var nilIfBlank: String? {
-        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
-    }
-
     var capitalizedSentence: String {
         prefix(1).uppercased() + dropFirst()
     }

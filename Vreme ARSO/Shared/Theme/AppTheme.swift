@@ -35,9 +35,9 @@ enum AppTheme {
         )
         static let cardGradient = LinearGradient(
             colors: [
-                Color(uiColor: Palette.surface).opacity(0.98),
-                Color(uiColor: Palette.surfaceMuted).opacity(0.74),
-                Color(uiColor: Palette.surfaceSoft).opacity(0.80)
+                Color(uiColor: Palette.canvasAlt).opacity(0.94),
+                Color(uiColor: Palette.surface).opacity(0.90),
+                Color(uiColor: Palette.canvasAlt).opacity(0.94)
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -88,7 +88,7 @@ enum AppTheme {
 
 extension View {
     func appScreenBackground() -> some View {
-        background(AppAmbientBackground().ignoresSafeArea())
+        background(WeatherBackground().ignoresSafeArea())
     }
 
     func appTabBarStyle() -> some View {
@@ -98,7 +98,7 @@ extension View {
 
     func appListStyle() -> some View {
         scrollContentBackground(.hidden)
-            .background(AppAmbientBackground().ignoresSafeArea())
+            .background(WeatherBackground().ignoresSafeArea())
             .listStyle(.insetGrouped)
             .listRowBackground(AppTheme.Colors.sectionTint.opacity(0.32))
             .listRowSeparatorTint(AppTheme.Colors.border.opacity(0.9))
@@ -114,28 +114,6 @@ extension View {
                 .stroke(AppTheme.Colors.border.opacity(0.62), lineWidth: 1)
         }
         .shadow(color: Color.black.opacity(0.18), radius: 18, y: 9)
-    }
-}
-
-private struct AppAmbientBackground: View {
-    var body: some View {
-        ZStack {
-            AppTheme.Colors.screenGradient
-
-            Circle()
-                .fill(AppTheme.Colors.accent.opacity(0.12))
-                .frame(width: 340, height: 340)
-                .blur(radius: 70)
-                .offset(x: 160, y: -300)
-
-            Circle()
-                .fill(AppTheme.Colors.accentSecondary.opacity(0.10))
-                .frame(width: 420, height: 420)
-                .blur(radius: 90)
-                .offset(x: -170, y: 330)
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
     }
 }
 

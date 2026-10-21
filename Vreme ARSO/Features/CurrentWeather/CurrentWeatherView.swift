@@ -57,6 +57,9 @@ struct CurrentWeatherView: View {
             .task {
                 await viewModel.load(favorites: settingsStore.favoriteStationIDs)
             }
+            .onReceive(NotificationCenter.default.publisher(for: .weatherDataDidRefresh)) { _ in
+                Task { await viewModel.load(favorites: settingsStore.favoriteStationIDs) }
+            }
             .appScreenBackground()
         }
     }

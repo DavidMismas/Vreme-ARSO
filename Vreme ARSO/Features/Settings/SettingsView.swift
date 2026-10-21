@@ -5,6 +5,9 @@ struct SettingsView: View {
     @ObservedObject var settingsStore: SettingsStore
     @ObservedObject var locationService: LocationService
     @State private var stations: [WeatherStation] = []
+    @State private var widgetStations: [WidgetStationChoice] = []
+    @State private var widgetStationsLoading = false
+    @State private var widgetStationsError: String?
     @State private var manualLocationQuery = ""
     @State private var isResolvingPlace = false
     @State private var locationMessage: String?
@@ -66,13 +69,18 @@ struct SettingsView: View {
 
             Section("Osveževanje") {
                 Toggle("Samodejno osveževanje", isOn: $settingsStore.autoRefreshEnabled)
-                Text("Radar in satelit se nalagata po potrebi, slike pa ostajajo v lokalnem cache-u za bolj miren UX.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text("Aplikacija se namenoma ne osvežuje prepogosto. Klici do ARSO virov so omejeni, da ne pride do preobremenitve ali IP blokade.")
+                Picker("Pogostost", selection: $settingsStore.autoRefreshInterval) {
+                    ForEach(AutoRefreshInterval.allCases) { interval in
+                        Text(interval.title).tag(interval)
+                    }
+                }
+                .disabled(!settingsStore.autoRefreshEnabled)
+                Text("Ob osvežitvi se posodobijo vreme, trenutna lokacija (če je vključena) in widgeti. V ozadju čas osvežitve določa iOS; ob vrnitvi v aplikacijo preverimo, ali je čas za novo osvežitev.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            widgetSupplementSection
 
             Section("Priljubljene postaje") {
                 if settingsStore.favoriteStationIDs.isEmpty {
@@ -127,7 +135,92 @@ struct SettingsView: View {
         .task {
             await loadStations()
         }
+        .task(id: settingsStore.widgetSupplementKind) {
+            await loadWidgetStations()
+        }
         .appListStyle()
+    }
+
+    private var widgetSupplementSection: some View {
+        Section("Dodatni podatek na widgetu") {
+            Picker("Podatek", selection: $settingsStore.widgetSupplementKind) {
+                ForEach(WidgetSupplementKind.allCases) { kind in
+                    Label(kind.title, systemImage: kind.symbol).tag(kind)
+                }
+            }
+            if settingsStore.widgetSupplementKind == .sea {
+                LabeledContent("Območje", value: "Obala")
+                Text("Temperatura morja iz obalne napovedi ARSO. Ta vir nima izbire posamezne merilne postaje.")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else {
+                Picker("Merilna postaja", selection: Binding(
+                    get: { selectedWidgetStationID },
+                    set: { id in
+                        let name = widgetStations.first(where: { $0.id == id })?.name ?? ""
+                        settingsStore.selectWidgetStation(kind: settingsStore.widgetSupplementKind, id: id, name: name)
+                    }
+                )) {
+                    Text("Izberi postajo").tag("")
+                    if !selectedWidgetStationID.isEmpty && !widgetStations.contains(where: { $0.id == selectedWidgetStationID }) {
+                        Text(selectedWidgetStationName).tag(selectedWidgetStationID)
+                    }
+                    ForEach(widgetStations) { station in
+                        Text(station.name).tag(station.id)
+                    }
+                }
+                .pickerStyle(.navigationLink)
+                if widgetStationsLoading {
+                    ProgressView("Nalagam merilne postaje …")
+                }
+                if let widgetStationsError {
+                    Text(widgetStationsError).font(.caption).foregroundStyle(.secondary)
+                    Button("Poskusi znova") { Task { await loadWidgetStations() } }
+                }
+                Text(settingsStore.widgetSupplementKind == .snow
+                     ? "Skupna višina snežne odeje v cm na izbrani ARSO postaji. Manjkajoča meritev ne pomeni 0 cm."
+                     : "Koncentracija delcev PM2.5 v µg/m³; če ni na voljo, se prikaže PM10. To je posamezna meritev, ne celoviti indeks kakovosti zraka.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Text("Ta postaja velja samo za dodatni podatek na widgetu. Izbira postaje za sneg in za zrak se shrani ločeno.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Text("Prikazano na srednjem in velikem widgetu.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private var selectedWidgetStationID: String {
+        settingsStore.widgetSupplementKind == .snow ? settingsStore.widgetSnowStationID : settingsStore.widgetAirStationID
+    }
+
+    private var selectedWidgetStationName: String {
+        settingsStore.widgetSupplementKind == .snow ? settingsStore.widgetSnowStationName : settingsStore.widgetAirStationName
+    }
+
+    private func loadWidgetStations() async {
+        let kind = settingsStore.widgetSupplementKind
+        widgetStations = []
+        widgetStationsError = nil
+        widgetStationsLoading = kind != .sea
+        guard kind != .sea else { return }
+        defer {
+            if kind == settingsStore.widgetSupplementKind { widgetStationsLoading = false }
+        }
+        do {
+            let choices: [WidgetStationChoice]
+            if kind == .snow {
+                let report = try await container.skiConditionsService.fetchReport()
+                choices = report.locations.map { WidgetStationChoice(id: $0.id, name: $0.name) }
+            } else {
+                let snapshot = try await container.airQualityService.fetchLatestSnapshot(forceRefresh: true)
+                choices = snapshot.stations.map { WidgetStationChoice(id: $0.code, name: $0.name) }
+            }
+            guard !Task.isCancelled, kind == settingsStore.widgetSupplementKind else { return }
+            widgetStations = choices.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            if choices.isEmpty { widgetStationsError = "ARSO trenutno ne objavlja seznama postaj." }
+        } catch {
+            guard !Task.isCancelled, kind == settingsStore.widgetSupplementKind else { return }
+            widgetStationsError = "Postaj ni bilo mogoče naložiti. Shranjena izbira ostane veljavna."
+        }
     }
 
     private func loadStations() async {
@@ -158,4 +251,10 @@ struct SettingsView: View {
             locationMessage = error.localizedDescription
         }
     }
+}
+
+
+private struct WidgetStationChoice: Identifiable {
+    let id: String
+    let name: String
 }

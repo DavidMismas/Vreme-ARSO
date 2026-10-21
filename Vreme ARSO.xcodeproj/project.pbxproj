@@ -10,6 +10,13 @@
 		63BCD6AA2F6D171400328CCC /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 63BCD6A92F6D171400328CCC /* WidgetKit.framework */; };
 		63BCD6AC2F6D171400328CCC /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 63BCD6AB2F6D171400328CCC /* SwiftUI.framework */; };
 		63BCD6B72F6D171600328CCC /* ArsoWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 63BCD6A72F6D171400328CCC /* ArsoWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		AD0124000000000000000000 /* Vreme ARSO/Core/Models/WidgetSupplement.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD0123000000000000000000 /* Vreme ARSO/Core/Models/WidgetSupplement.swift */; };
+		AD0124000000000000000001 /* Vreme ARSO/Core/Models/AirQualityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD0123000000000000000001 /* Vreme ARSO/Core/Models/AirQualityModels.swift */; };
+		AD0124000000000000000002 /* Vreme ARSO/Core/Services/AirQuality/AirQualityXMLParsers.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD0123000000000000000002 /* Vreme ARSO/Core/Services/AirQuality/AirQualityXMLParsers.swift */; };
+		AD0124000000000000000003 /* Vreme ARSO/Core/Parsing/XMLParserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD0123000000000000000003 /* Vreme ARSO/Core/Parsing/XMLParserService.swift */; };
+		AD0124000000000000000004 /* Vreme ARSO/Core/Utilities/ARSOError.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD0123000000000000000004 /* Vreme ARSO/Core/Utilities/ARSOError.swift */; };
+		AD0124000000000000000005 /* Vreme ARSO/Core/Utilities/DateFormatterSI.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD0123000000000000000005 /* Vreme ARSO/Core/Utilities/DateFormatterSI.swift */; };
+		AD0124000000000000000006 /* Vreme ARSO/Core/Utilities/Foundation+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD0123000000000000000006 /* Vreme ARSO/Core/Utilities/Foundation+Extensions.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -50,6 +57,13 @@
 		63BCD6AB2F6D171400328CCC /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		63BCD7AA2F6D1A2D00328CCC /* ArsoWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ArsoWidgetExtension.entitlements; sourceTree = "<group>"; };
 		A1B2C3D22F6D000100000002 /* Vreme ARSO Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Vreme ARSO Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AD0123000000000000000000 /* Vreme ARSO/Core/Models/WidgetSupplement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Vreme ARSO/Core/Models/WidgetSupplement.swift"; sourceTree = SOURCE_ROOT; };
+		AD0123000000000000000001 /* Vreme ARSO/Core/Models/AirQualityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Vreme ARSO/Core/Models/AirQualityModels.swift"; sourceTree = SOURCE_ROOT; };
+		AD0123000000000000000002 /* Vreme ARSO/Core/Services/AirQuality/AirQualityXMLParsers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Vreme ARSO/Core/Services/AirQuality/AirQualityXMLParsers.swift"; sourceTree = SOURCE_ROOT; };
+		AD0123000000000000000003 /* Vreme ARSO/Core/Parsing/XMLParserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Vreme ARSO/Core/Parsing/XMLParserService.swift"; sourceTree = SOURCE_ROOT; };
+		AD0123000000000000000004 /* Vreme ARSO/Core/Utilities/ARSOError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Vreme ARSO/Core/Utilities/ARSOError.swift"; sourceTree = SOURCE_ROOT; };
+		AD0123000000000000000005 /* Vreme ARSO/Core/Utilities/DateFormatterSI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Vreme ARSO/Core/Utilities/DateFormatterSI.swift"; sourceTree = SOURCE_ROOT; };
+		AD0123000000000000000006 /* Vreme ARSO/Core/Utilities/Foundation+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Vreme ARSO/Core/Utilities/Foundation+Extensions.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -110,6 +124,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		632D7CB6308908D00025CC20 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				AD0123000000000000000000 /* Vreme ARSO/Core/Models/WidgetSupplement.swift */,
+				AD0123000000000000000001 /* Vreme ARSO/Core/Models/AirQualityModels.swift */,
+				AD0123000000000000000002 /* Vreme ARSO/Core/Services/AirQuality/AirQualityXMLParsers.swift */,
+				AD0123000000000000000003 /* Vreme ARSO/Core/Parsing/XMLParserService.swift */,
+				AD0123000000000000000004 /* Vreme ARSO/Core/Utilities/ARSOError.swift */,
+				AD0123000000000000000005 /* Vreme ARSO/Core/Utilities/DateFormatterSI.swift */,
+				AD0123000000000000000006 /* Vreme ARSO/Core/Utilities/Foundation+Extensions.swift */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
 		63BCD4972F6C6EC500328CCC = {
 			isa = PBXGroup;
 			children = (
@@ -119,6 +147,7 @@
 				63BCD6AD2F6D171400328CCC /* ArsoWidget */,
 				63BCD6A82F6D171400328CCC /* Frameworks */,
 				63BCD4A12F6C6EC500328CCC /* Products */,
+				632D7CB6308908D00025CC20 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -292,6 +321,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AD0124000000000000000000 /* Vreme ARSO/Core/Models/WidgetSupplement.swift in Sources */,
+				AD0124000000000000000001 /* Vreme ARSO/Core/Models/AirQualityModels.swift in Sources */,
+				AD0124000000000000000002 /* Vreme ARSO/Core/Services/AirQuality/AirQualityXMLParsers.swift in Sources */,
+				AD0124000000000000000003 /* Vreme ARSO/Core/Parsing/XMLParserService.swift in Sources */,
+				AD0124000000000000000004 /* Vreme ARSO/Core/Utilities/ARSOError.swift in Sources */,
+				AD0124000000000000000005 /* Vreme ARSO/Core/Utilities/DateFormatterSI.swift in Sources */,
+				AD0124000000000000000006 /* Vreme ARSO/Core/Utilities/Foundation+Extensions.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -454,6 +490,7 @@
 				DEVELOPMENT_TEAM = AX2Z5LF5SG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AppInfo.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Vremenko;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.weather";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Lokacija se uporabi za izbor najbližje ARSO postaje.";
@@ -490,6 +527,7 @@
 				DEVELOPMENT_TEAM = AX2Z5LF5SG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AppInfo.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Vremenko;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.weather";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Lokacija se uporabi za izbor najbližje ARSO postaje.";
