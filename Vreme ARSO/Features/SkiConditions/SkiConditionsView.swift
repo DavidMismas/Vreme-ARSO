@@ -22,7 +22,7 @@ struct SkiConditionsView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         CardSection(title: "Kaj prikazuje", systemImage: "info.circle") {
-                            Text("To so ARSO snežne postaje ob smučiščih in v gorah. Prikaz ne vključuje odprtosti prog ali naprav.")
+                            Text("To so sveže objavljene meritve višine snega na ARSO postajah. Podatki ne povedo, ali so proge ali naprave odprte.")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }

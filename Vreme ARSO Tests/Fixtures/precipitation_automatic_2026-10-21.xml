@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
+<data>
+  <metData>
+    <domain_meteosiId>LJUBL-ANA_BEZIGRAD_</domain_meteosiId>
+    <domain_longTitle>Ljubljana</domain_longTitle>
+    <domain_lat>46.0655</domain_lat>
+    <domain_lon>14.5124</domain_lon>
+    <valid>21.10.2026 16:50 CEST</valid>
+    <tp_12h_acc>16.41</tp_12h_acc>
+  </metData>
+  <metData>
+    <domain_meteosiId>RATECE_</domain_meteosiId>
+    <domain_longTitle>Rateče</domain_longTitle>
+    <domain_lat>46.4971</domain_lat>
+    <domain_lon>13.7129</domain_lon>
+    <valid>21.10.2026 16:30 CEST</valid>
+    <tp_12h_acc>12.88</tp_12h_acc>
+  </metData>
+  <metData>
+    <domain_meteosiId>VOGEL_</domain_meteosiId>
+    <domain_longTitle>Vogel</domain_longTitle>
+    <domain_lat>46.2594</domain_lat>
+    <domain_lon>13.8396</domain_lon>
+    <valid>21.10.2026 16:50 CEST</valid>
+    <tp_12h_acc>36.96</tp_12h_acc>
+  </metData>
+  <metData>
+    <domain_meteosiId>GACNIK_</domain_meteosiId>
+    <domain_longTitle>Gačnik</domain_longTitle>
+    <domain_lat>46.6178</domain_lat>
+    <domain_lon>15.6838</domain_lon>
+    <valid>21.10.2026 16:50 CEST</valid>
+    <tp_12h_acc>0</tp_12h_acc>
+  </metData>
+</data>

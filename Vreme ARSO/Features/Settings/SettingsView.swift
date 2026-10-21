@@ -216,6 +216,13 @@ struct SettingsView: View {
             }
             guard !Task.isCancelled, kind == settingsStore.widgetSupplementKind else { return }
             widgetStations = choices.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            if kind == .snow, !settingsStore.widgetSnowStationID.isEmpty,
+               !choices.contains(where: { $0.id == settingsStore.widgetSnowStationID }),
+               let migrated = choices.first(where: {
+                   $0.name.compare(settingsStore.widgetSnowStationName, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+               }) {
+                settingsStore.selectWidgetStation(kind: .snow, id: migrated.id, name: migrated.name)
+            }
             if choices.isEmpty { widgetStationsError = "ARSO trenutno ne objavlja seznama postaj." }
         } catch {
             guard !Task.isCancelled, kind == settingsStore.widgetSupplementKind else { return }

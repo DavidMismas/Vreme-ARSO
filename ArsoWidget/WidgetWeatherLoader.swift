@@ -185,22 +185,28 @@ struct WidgetWeatherLoader {
                 return WidgetSupplementValue(kind: .sea, stationName: "Obala", value: text.replacingOccurrences(of: "Morje ", with: ""), measuredAt: nil)
             }
             guard !selection.stationID.isEmpty else { return selection.unavailable }
-            let url = selection.kind == .snow
-                ? URL(string: "https://meteo.arso.gov.si/uploads/probase/www/observ/surface/text/sl/observation_si_latest.xml")!
-                : URL(string: "https://www.arso.gov.si/xml/zrak/ones_zrak_urni_podatki_zadnji.xml")!
-            var request = URLRequest(url: url)
-            request.timeoutInterval = 20
-            request.setValue("VremeARSOWidget/1.0 (iOS WidgetKit)", forHTTPHeaderField: "User-Agent")
-            let (data, response) = try await session.data(for: request)
-            guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else {
-                return selection.unavailable
+            if selection.kind == .snow {
+                async let automatic = try? fetchSupplementData(from: SnowObservationHTMLParser.automaticURL)
+                async let manual = try? fetchSupplementData(from: SnowObservationHTMLParser.manualURL)
+                let (automaticData, manualData) = await (automatic, manual)
+                return WidgetSupplementParser.snow(automaticData: automaticData, manualData: manualData, selection: selection)
             }
-            return try selection.kind == .snow
-                ? WidgetSupplementParser.snow(data: data, selection: selection)
-                : WidgetSupplementParser.air(data: data, selection: selection)
+            let data = try await fetchSupplementData(from: URL(string: "https://www.arso.gov.si/xml/zrak/ones_zrak_urni_podatki_zadnji.xml")!)
+            return try WidgetSupplementParser.air(data: data, selection: selection)
         } catch {
             return selection.unavailable
         }
+    }
+
+    private func fetchSupplementData(from url: URL) async throws -> Data {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 20
+        request.setValue("VremeARSOWidget/1.0 (iOS WidgetKit)", forHTTPHeaderField: "User-Agent")
+        let (data, response) = try await session.data(for: request)
+        guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else {
+            throw WidgetLoaderError.invalidResponse
+        }
+        return data
     }
 
     private func fetchSeaTemperatureText() async throws -> String? {

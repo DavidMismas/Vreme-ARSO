@@ -31,7 +31,7 @@ struct WidgetSupplementSelection: Equatable {
         return Self(kind: kind, stationID: defaults?.string(forKey: "\(prefix)StationID") ?? "", stationName: defaults?.string(forKey: "\(prefix)StationName") ?? "")
     }
 
-    var cacheKey: String { "\(kind.rawValue)|\(stationID)|\(stationName)" }
+    var cacheKey: String { "\(kind.rawValue)\(kind == .snow ? "-v2" : "")|\(stationID)|\(stationName)" }
     var unavailable: WidgetSupplementValue {
         WidgetSupplementValue(kind: kind, stationName: kind == .sea ? "Obala" : stationName,
                               value: stationID.isEmpty && kind != .sea ? "Izberi postajo" : "Ni podatka", measuredAt: nil)
@@ -53,15 +53,15 @@ struct WidgetSupplementValue: Codable, Equatable {
 }
 
 enum WidgetSupplementParser {
-    static func snow(data: Data, selection: WidgetSupplementSelection) throws -> WidgetSupplementValue {
-        let root = try XMLParserService().parse(data: data)
-        guard let station = root.children(named: "metData").first(where: {
-            ($0.textValue(forChild: "domain_meteosiId") ?? $0.textValue(forChild: "domain_longTitle")) == selection.stationID
-        }), let raw = station.textValue(forChild: "snow"), let depth = Int(raw), depth >= 0 else {
-            return selection.unavailable
-        }
-        return WidgetSupplementValue(kind: .snow, stationName: selection.stationName, value: "\(depth) cm",
-                                     measuredAt: DateFormatterSI.parseARSODate(station.textValue(forChild: "tsUpdated")))
+    static func snow(automaticData: Data?, manualData: Data?, selection: WidgetSupplementSelection, now: Date = .now) -> WidgetSupplementValue {
+        let readings = SnowObservationHTMLParser.parse(automaticData: automaticData, manualData: manualData, now: now)
+        let reading = readings.first(where: { $0.id == selection.stationID })
+            ?? readings.first(where: {
+                !$0.name.isEmpty && $0.name.compare(selection.stationName, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+            })
+        guard let reading else { return selection.unavailable }
+        return WidgetSupplementValue(kind: .snow, stationName: reading.name,
+                                     value: "\(reading.depthCentimeters) cm", measuredAt: reading.updatedAt)
     }
 
     static func air(data: Data, selection: WidgetSupplementSelection) throws -> WidgetSupplementValue {

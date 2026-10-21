@@ -20,6 +20,7 @@ struct RootView: View {
     }
 
     @State private var atmosphere: WeatherAtmosphere = .cloudy
+    @State private var hasCheckedPrecipitationThisLaunch = false
 
     var body: some View {
         ZStack {
@@ -85,7 +86,9 @@ struct RootView: View {
             }
             while !Task.isCancelled {
                 let canRetry = homeViewModel.lastRefreshAttempt.map { Date().timeIntervalSince($0) >= 300 } ?? true
-                if canRetry && (homeViewModel.state == nil || (settingsStore.autoRefreshEnabled && settingsStore.autoRefreshInterval.isDue(lastUpdate: homeViewModel.state?.fetchedAt))) {
+                let needsInitialPrecipitation = !hasCheckedPrecipitationThisLaunch && homeViewModel.state?.precipitation == nil
+                if canRetry && (homeViewModel.state == nil || needsInitialPrecipitation || (settingsStore.autoRefreshEnabled && settingsStore.autoRefreshInterval.isDue(lastUpdate: homeViewModel.state?.fetchedAt))) {
+                    hasCheckedPrecipitationThisLaunch = true
                     await homeViewModel.refresh(settings: settingsStore, locationService: locationService)
                 }
                 do { try await Task.sleep(for: .seconds(30)) }
@@ -121,6 +124,14 @@ private struct MoreView: View {
                         systemImage: "exclamationmark.triangle.fill"
                     ) {
                         WarningsView(container: container)
+                    }
+
+                    MoreLinkRow(
+                        title: "Padavine po postajah",
+                        subtitle: "Meritve padavin na ARSO postajah",
+                        systemImage: "drop.fill"
+                    ) {
+                        PrecipitationStationsView(container: container)
                     }
 
                     MoreLinkRow(

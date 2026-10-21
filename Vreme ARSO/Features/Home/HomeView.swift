@@ -158,10 +158,11 @@ struct HomeView: View {
                 tint: AppTheme.Colors.accent
             )
             HeroMetricCard(
-                title: "Padavine",
-                value: NumberFormatterSI.string(from: state.observation.precipitation, suffix: "mm"),
+                title: state.precipitation?.periodLabel ?? "Padavine",
+                value: NumberFormatterSI.string(from: state.precipitation?.amountMillimeters, suffix: "mm"),
                 systemImage: "drop.fill",
-                tint: .cyan
+                tint: .cyan,
+                subtitle: state.precipitation?.stationName
             )
             HeroMetricCard(
                 title: "Vlaga",
@@ -326,6 +327,7 @@ private struct HeroMetricCard: View {
     let value: String
     let systemImage: String
     let tint: Color
+    var subtitle: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -342,6 +344,13 @@ private struct HeroMetricCard: View {
                 .foregroundStyle(.primary)
                 .lineLimit(2)
                 .minimumScaleFactor(0.85)
+            if let subtitle {
+                Text("Postaja: \(subtitle)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, minHeight: 86, alignment: .leading)
@@ -441,6 +450,7 @@ final class HomeViewModel: ObservableObject {
     struct State {
         let location: ResolvedForecastLocation
         let observation: CurrentObservation
+        let precipitation: PrecipitationReading?
         let condition: WeatherCondition
         let summaryForecast: ForecastTextSection?
         let primaryWarning: WarningItem?
@@ -542,6 +552,7 @@ final class HomeViewModel: ObservableObject {
                 throw ARSOError.parsingFailed("Za izbrano lokacijo trenutno ni vremenskih podatkov.")
             }
 
+            async let precipitationTask = try? container.precipitationService.reading(near: resolvedLocation)
             let locationConditions = try? await container.locationForecastService.fetchCurrentConditions(for: resolvedLocation)
             let stationFallbackObservation = resolvedLocation.observation ?? observations.first
             let observation = mergedObservation(
@@ -574,6 +585,7 @@ final class HomeViewModel: ObservableObject {
             let nextState = State(
                 location: displayLocation,
                 observation: observation,
+                precipitation: await precipitationTask,
                 condition: container.weatherIconProvider.condition(for: observation),
                 summaryForecast: forecastSections.first(where: { $0.type == .napoved }),
                 primaryWarning: warnings.sorted(by: { $0.severity > $1.severity }).first,
@@ -669,6 +681,7 @@ private enum HomeStateStore {
 private struct CachedHomeState: Codable {
     let location: CachedResolvedForecastLocation
     let observation: CachedCurrentObservation
+    let precipitation: PrecipitationReading?
     let condition: String
     let summaryForecast: CachedForecastTextSection?
     let primaryWarning: CachedWarningItem?
@@ -680,6 +693,7 @@ private struct CachedHomeState: Codable {
     init(state: HomeViewModel.State) {
         location = CachedResolvedForecastLocation(location: state.location)
         observation = CachedCurrentObservation(observation: state.observation)
+        precipitation = state.precipitation
         condition = state.condition.rawValue
         summaryForecast = state.summaryForecast.map(CachedForecastTextSection.init)
         primaryWarning = state.primaryWarning.map(CachedWarningItem.init)
@@ -695,6 +709,7 @@ private struct CachedHomeState: Codable {
         return HomeViewModel.State(
             location: location.location(observation: restoredObservation),
             observation: restoredObservation,
+            precipitation: precipitation,
             condition: WeatherCondition(rawValue: condition) ?? .unknown,
             summaryForecast: summaryForecast?.section,
             primaryWarning: primaryWarning?.warning,

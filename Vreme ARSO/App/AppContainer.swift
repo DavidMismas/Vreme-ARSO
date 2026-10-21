@@ -8,6 +8,7 @@ struct AppContainer {
     let imageCacheService: ImageCacheService
     let weatherIconProvider: WeatherIconProvider
     let locationResolver: LocationResolver
+    let precipitationService: ARSOPrecipitationService
     let currentWeatherService: ARSOCurrentWeatherService
     let stationsService: ARSOStationsService
     let forecastTextService: ARSOForecastTextService
@@ -44,6 +45,7 @@ struct AppContainer {
             imageCacheService: imageCacheService,
             weatherIconProvider: weatherIconProvider,
             locationResolver: locationResolver,
+            precipitationService: ARSOPrecipitationService(apiClient: apiClient),
             currentWeatherService: ARSOCurrentWeatherService(apiClient: apiClient, xmlParser: xmlParserService),
             stationsService: ARSOStationsService(apiClient: apiClient, xmlParser: xmlParserService),
             forecastTextService: ARSOForecastTextService(apiClient: apiClient, htmlExtractor: htmlTextExtractor),

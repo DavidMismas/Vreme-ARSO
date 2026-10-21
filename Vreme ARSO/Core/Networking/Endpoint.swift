@@ -23,6 +23,9 @@ enum Endpoint {
         }
     }
 
+    case automaticObservations
+    case snowAutomaticObservations
+    case snowManualObservations
     case observationsOverview
     case forecastTextOverview
     case forecastTodayTomorrow
@@ -51,6 +54,12 @@ enum Endpoint {
 
     var url: URL {
         switch self {
+        case .automaticObservations:
+            return Self.baseURL.appending(path: "/uploads/probase/www/observ/surface/text/sl/observationAms_si_latest.xml")
+        case .snowAutomaticObservations:
+            return SnowObservationHTMLParser.automaticURL
+        case .snowManualObservations:
+            return SnowObservationHTMLParser.manualURL
         case .observationsOverview:
             return Self.baseURL.appending(path: "/uploads/probase/www/observ/surface/text/sl/observation_si_latest.xml")
         case .forecastTextOverview:
@@ -110,7 +119,7 @@ enum Endpoint {
 
     var refreshPolicy: RefreshPolicy {
         switch self {
-        case .observationsOverview, .airQualityHourlyLatest, .airQualityDailyLatest, .airQualityHourlySevenDays:
+        case .automaticObservations, .snowAutomaticObservations, .snowManualObservations, .observationsOverview, .airQualityHourlyLatest, .airQualityDailyLatest, .airQualityHourlySevenDays:
             return .currentConditions
         case .radarTimeline, .satelliteLatestImage, .satelliteLatestAnimation, .coastForecast, .mountainForecast, .mountainSeaOverview, .graphicTimeline, .graphicLatest:
             return .imagery
